@@ -3,13 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกคะแนนนักเรียน - Student Grading System</title>
+    <title>KT|PP5 Online System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style id="print-styles">
+	
+	    .swal2-container {
+            z-index: 60000 !important;
+        }
+		
+		/* Loading Overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30000; 
+            backdrop-filter: blur(2px);
+            transition: opacity 0.3s ease;
+        }		
+		
+	
         /* 1. กำหนดค่าเริ่มต้นหน้ากระดาษและตัวนับเลขหน้า */
         @page {
             size: A4 portrait;
@@ -294,7 +317,30 @@
             object-fit: cover; 
             border-radius: 0.5rem;
             margin-bottom: 1.5rem; 
-        }		
+        }
+
+		.marquee-container {
+				overflow: hidden;
+				white-space: nowrap;
+				position: relative;
+			}
+			
+			.marquee-text {
+				display: inline-block;
+				padding-left: 100%; /* เริ่มต้นจากขวาสุด */
+				animation: scroll-text 15s linear infinite; /* ความเร็ว 15 วินาที */
+			}
+
+			/* หยุดวิ่งเมื่อเอาเมาส์ไปชี้ */
+			.marquee-container:hover .marquee-text {
+				animation-play-state: paused;
+			}
+
+			@keyframes scroll-text {
+				0% { transform: translateX(0); }
+				100% { transform: translateX(-100%); }
+			}
+		
     </style>
 </head>
 <body class="border-primary p-1 md:p-1 print-portrait" id="app-body">
@@ -304,6 +350,78 @@
         <div class="spinner"></div>
         <p class="mt-4 font-bold text-slate-600">กำลังดำเนินการ...</p>
     </div>
+
+			<!-- Login Modal -->
+			<div id="login-modal" class="fixed inset-0 z-[9999] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center font-['Sarabun'] hidden">
+				<!-- ปรับความกว้างจาก max-w-md เป็น max-w-2xl -->
+				<div class="bg-white w-full max-w-xl rounded-xl shadow-xl overflow-hidden border border-slate-200 p-6 transform transition-all scale-100 relative">
+					
+					<div class="text-center mb-2">
+						<div class="w-36 h-36 flex items-center justify-center mx-auto">
+							<img src="https://lh3.googleusercontent.com/d/17nowPco3WNP-0d9lFZG_VQkc-vm46mQc" class="max-w-full max-h-full object-contain" alt="School Logo">
+						</div>
+						
+						<h2 class="text-2xl font-bold text-slate-800 mb-2">KT | PP5 Online System</h2>
+						
+						<div class="text-center mt-2 mb-2 no-print marquee-container" style="color:#000000; font-size: 16px; margin-top: 2px; margin-bottom: 2px;">
+								<h3 class="marquee-text" style="margin-top: 2px; margin-bottom: 2px;">
+									ยินดีต้อนรับเข้าสู่ระบบบันทึกคะแนนออนไลน์ :: ออกแบบและพัฒนาโดย KT | Tanasarn Sirak
+								</h3>
+							</div>
+					</div>
+					<hr class="mt-4 mb-4 border-t-4 border-rose-400">
+					<div class="space-y-2">
+						<!-- จัดวาง Username และ Password ให้อยู่คู่กันด้วย Grid -->
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label class="block text-xs font-bold text-slate-500 uppercase mb-1">ชื่อผู้ใช้ (Username)</label>
+								<div class="relative">
+									<i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 "></i>
+									<input type="text" id="login-username" class="w-full pl-10 pr-4 py-2 bg-lime-200 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 font-bold transition-all" placeholder="ระบุชื่อผู้ใช้">
+								</div>
+							</div>
+
+							<div>
+								<label class="block text-xs font-bold text-slate-500 uppercase mb-1">รหัสผ่าน (Password)</label>
+								<div class="relative">
+									<i class="fa-solid fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+									<input type="password" id="login-password" class="w-full pl-10 pr-4 py-2 bg-lime-200 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 font-bold transition-all" placeholder="ระบุรหัสผ่าน">
+								</div>
+							</div>
+						</div>
+
+						<div class="pt-2">
+							<label class="block text-xs font-bold text-slate-500 uppercase mb-1">รหัสความปลอดภัย (CAPTCHA)</label>
+							<div class="flex gap-3">
+								<div id="captcha-display" class="w-1/2 bg-slate-800 rounded-lg flex items-center justify-center relative overflow-hidden select-none group cursor-pointer border-2 border-slate-600" onclick="generateCaptcha()" title="คลิกเพื่อเปลี่ยนรหัส">
+									<span id="captcha-text" class="text-xl font-bold text-white tracking-[0.2em] font-mono z-10" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5); letter-spacing: 4px;">ABCD</span>
+									<div class="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent"></div>
+									<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50">
+										<i class="fa-solid fa-arrows-rotate text-white"></i>
+									</div>
+								</div>
+								<input type="text" id="login-captcha" class="w-1/2 px-4 py-1 bg-lime-200 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold uppercase tracking-widest text-lg" placeholder="ระบุรหัส" maxlength="6">
+							</div>
+						</div>
+					</div>
+
+					<div class="flex justify-center gap-4 mt-3">
+						<button onclick="performLogin(this)" class="group w-full px-3 py-2 rounded bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 transform hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+							<i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+						</button>
+					</div>
+					<hr class="mt-2 mb-2"></hr>
+					 <div class="mt-0 text-center">
+						<footer style="text-align: center;background-color:#faff99; padding: 10px 0; margin-top: auto; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #555; width: 100%;">
+							:: Created and Develop by KT|Tanasarn Sirak ::
+							<div class="container text-center">
+							<a href="https://line.me/ti/p/3F7VGrqgUr" target="_blank"><i class="fa-solid fa-comments"></i></a> <a style="color:red;text-decoration:none;font-size:12px" href="https://line.me/ti/p/3F7VGrqgUr" target="_blank"> สอบถาม/แจ้งปัญหา :: <span style="font-size:12px;color:black">KT | Tanasarn Sirak ©2569 </a>
+							</div>
+						</footer>
+					</div>
+				</div>
+			</div>
+
 
     <div id="app-body-container" class="max-w-full mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 px-5 py-5">
         <div class="text-center no-print"> 
@@ -668,6 +786,11 @@
                     <button onclick="switchView('settings')" class="nav-btn btn-grad-settings px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2">
                         <i class="fa-solid fa-gear"></i>
                         ตั้งค่าวิชา
+                    </button>
+					<!-- ปุ่มออกจากระบบ (เพิ่มใหม่) -->
+                    <button onclick="logoutSystem()" class="nav-btn bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        Logout
                     </button>
                 </div>
             </div>
@@ -1115,11 +1238,19 @@
         </div>
     </div>
 
-	<script>
+<script>
 		const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
 		
-		function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
-		function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+// แก้ไขฟังก์ชันนี้ (เพิ่มบรรทัด zIndex)
+		function showLoading() { 
+			const overlay = document.getElementById('loading-overlay');
+			overlay.style.zIndex = '50000'; // บังคับให้สูงกว่า Login Modal (9999) และ SweetAlert (20000)
+			overlay.style.display = 'flex'; 
+		}
+
+		function hideLoading() { 
+			document.getElementById('loading-overlay').style.display = 'none'; 
+		}
 		function showNotification(msg, type = 'success') { Toast.fire({ icon: type, title: msg }); }
 
 		function getStatusStyle(status) { 
@@ -2088,12 +2219,30 @@
 
 		function getStoredScore(sid, r, uid, fid, def = 0) { return scoreData[sid]?.[r]?.[uid]?.[fid] ?? def; }
 
+		// [ส่วนที่แก้ไข/ตรวจสอบ] ฟังก์ชันจัดการการกรอกคะแนนและการแสดงผลทันที
+
+		/**
+		 * ฟังก์ชันเรียกเมื่อมีการพิมพ์คะแนน (oninput)
+		 * ทำหน้าที่: อัปเดตข้อมูลในตัวแปร scoreData และสั่งให้คำนวณหน้าจอใหม่
+		 */
 		function updateScore(el, uid, fid, val, idx) {
-			const sub = subjects.find(s => s.id === activeSubjectId); if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
-			if (!scoreData[activeSubjectId][activeClassName]) scoreData[activeSubjectId][activeClassName] = {}; if (!scoreData[activeSubjectId][activeClassName][uid]) scoreData[activeSubjectId][activeClassName][uid] = {};
-			if (fid === 'remark') { scoreData[activeSubjectId][activeClassName][uid][fid] = val; initTable(); return; } 
+			const sub = subjects.find(s => s.id === activeSubjectId); 
+			if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
+			if (!scoreData[activeSubjectId][activeClassName]) scoreData[activeSubjectId][activeClassName] = {}; 
+			if (!scoreData[activeSubjectId][activeClassName][uid]) scoreData[activeSubjectId][activeClassName][uid] = {};
+			
+			// กรณีเลือก Remark (ร, มส, ผ, มผ)
+			if (fid === 'remark') { 
+				scoreData[activeSubjectId][activeClassName][uid][fid] = val; 
+				// อัปเดตการแสดงผลทันที (รวมถึงสีเกรด)
+				updateScoreDisplay(uid, idx, sub, fid, el, 0, 0); 
+				return; 
+			} 
+
+			// ตรวจสอบคะแนนเต็ม
 			let maxScore = 0;
 			let passPct = 50;
+			
 			if (fid.startsWith('u')) { 
 				const unitId = parseInt(fid.substring(1, fid.indexOf('_'))); 
 				const unit = sub.units.find(u => u.id === unitId); 
@@ -2103,27 +2252,69 @@
 			} else if (fid.includes('fin')) { 
 				maxScore = sub.finMax; passPct = sub.finPassPct; 
 			}
+
 			const numericVal = parseFloat(val) || 0;
-			if (numericVal > maxScore) { Swal.fire({ icon: 'warning', title: 'คะแนนเกิน', text: `คะแนนเต็มคือ ${maxScore} คะแนน`, confirmButtonText: 'ตกลง' }); el.value = 0; scoreData[activeSubjectId][activeClassName][uid][fid] = 0; updateScoreDisplay(uid, idx, sub, fid, el, maxScore, passPct); return; }
+
+			// แจ้งเตือนถ้ากรอกเกินคะแนนเต็ม
+			if (numericVal > maxScore) { 
+				Swal.fire({ 
+					icon: 'warning', 
+					title: 'คะแนนเกิน', 
+					text: `คะแนนเต็มคือ ${maxScore} คะแนน`, 
+					confirmButtonText: 'ตกลง' 
+				}); 
+				el.value = 0; 
+				scoreData[activeSubjectId][activeClassName][uid][fid] = 0; 
+				updateScoreDisplay(uid, idx, sub, fid, el, maxScore, passPct); 
+				return; 
+			}
+
+			// บันทึกค่าลงตัวแปรหลัก
 			scoreData[activeSubjectId][activeClassName][uid][fid] = numericVal; 
+			
+			// เรียกฟังก์ชันคำนวณและแสดงผลทันที
 			updateScoreDisplay(uid, idx, sub, fid, el, maxScore, passPct);
 		}
 
+		/**
+		 * ฟังก์ชันคำนวณและอัปเดตหน้าจอ (DOM) ทันที
+		 * ทำหน้าที่: รวมคะแนน, ตัดเกรด, เปลี่ยนสีช่องคะแนน/เกรด
+		 */
 		function updateScoreDisplay(uid, idx, sub, fid, el, maxScore, passPct) {
-			const t = calculateStudentTotal(sub, uid), p = calculateStudentPct(sub, t), rem = scoreData[activeSubjectId][activeClassName][uid]?.remark || "", g = rem || computeGrade(sub, t);
-			const tEl = document.getElementById(`total-${idx}`), pEl = document.getElementById(`pct-${idx}`), gEl = document.getElementById(`grade-${idx}`);
-			if (tEl) tEl.innerText = t; if (pEl) pEl.innerText = p + "%"; if (gEl) { gEl.innerText = g; gEl.className = `px-2 py-1 text-center font-bold bg-green-50/30 border-r text-[12px] ${getGradeColor(g)}`; }
+			// 1. คำนวณคะแนนรวมและเกรดใหม่ ณ ขณะนั้น
+			const t = calculateStudentTotal(sub, uid);
+			const p = calculateStudentPct(sub, t);
+			const rem = scoreData[activeSubjectId][activeClassName][uid]?.remark || "";
+			const g = rem || computeGrade(sub, t); // ถ้ามี Remark ให้ใช้ Remark ถ้าไม่มีให้ใช้เกรดที่คำนวณได้
+
+			// 2. อ้างอิง Element บนหน้าเว็บตาม ID
+			const tEl = document.getElementById(`total-${idx}`);
+			const pEl = document.getElementById(`pct-${idx}`);
+			const gEl = document.getElementById(`grade-${idx}`);
+
+			// 3. อัปเดตข้อความในตารางทันที
+			if (tEl) tEl.innerText = t; 
+			if (pEl) pEl.innerText = p + "%"; 
+			if (gEl) { 
+				gEl.innerText = g; 
+				// อัปเดตสีของเกรด (เขียว/แดง/ม่วง ฯลฯ)
+				gEl.className = `px-2 py-1 text-center font-bold bg-green-50/30 border-r text-[12px] ${getGradeColor(g)}`; 
+			}
+
+			// 4. เปลี่ยนสีช่องกรอกคะแนน (ผ่าน/ไม่ผ่าน)
 			if (el && fid.endsWith('_r')) {
 				const numericVal = scoreData[activeSubjectId][activeClassName][uid][fid] || 0;
 				const passMark = (maxScore * passPct) / 100;
 				if (numericVal < passMark) {
 					el.classList.remove('bg-white');
-					el.classList.add('bg-yellow-300');
+					el.classList.add('bg-yellow-300'); // สีเหลืองถ้าตก
 				} else {
 					el.classList.remove('bg-yellow-300');
 					el.classList.add('bg-white');
 				}
 			}
+
+			// 5. อัปเดตไอคอนสถานะ (ผ่านทุกหน่วยหรือไม่)
 			const iconWrapper = document.getElementById(`status-icon-wrapper-${idx}`);
 			if (iconWrapper) {
 				let passedUnitsCount = 0;
@@ -2134,6 +2325,8 @@
 				});
 				iconWrapper.innerHTML = generateStatusIcon(passedUnitsCount, sub.units.length);
 			}
+
+			// 6. อัปเดตแถบสรุปด้านล่าง (จำนวนคน, เกรดเฉลี่ย)
 			updateAchievementSummary(sub, getActiveStudentsInClass(activeClassName));
 		}
 
@@ -2163,11 +2356,40 @@
 		
 		function saveScores() { 
 			showLoading();
+            
+            // 1. ดึงข้อมูลวิชาปัจจุบัน เพื่อใช้ในการคำนวณเกรด
+            const sub = subjects.find(s => s.id === activeSubjectId);
+            if (!sub) {
+                hideLoading();
+                Swal.fire('Error', 'ไม่พบข้อมูลรายวิชา', 'error');
+                return;
+            }
+
+            // 2. วนลูปคำนวณ Total และ Grade ของนักเรียนทุกคนที่มีคะแนน
+            // ตรวจสอบว่ามีข้อมูลคะแนนของวิชานี้และห้องนี้หรือไม่
+            if (scoreData[activeSubjectId] && scoreData[activeSubjectId][activeClassName]) {
+                const studentsInRoom = scoreData[activeSubjectId][activeClassName];
+                
+                for (const uid in studentsInRoom) {
+                    // คำนวณคะแนนรวม (ใช้ฟังก์ชันที่มีอยู่แล้ว)
+                    const totalScore = calculateStudentTotal(sub, uid);
+                    
+                    // คำนวณเกรด (ใช้ฟังก์ชันที่มีอยู่แล้ว)
+                    // ตรวจสอบ Remark ก่อน ถ้ามีให้ใช้ Remark ถ้าไม่มีให้คำนวณเกรด
+                    const remark = studentsInRoom[uid].remark || "";
+                    const grade = remark || computeGrade(sub, totalScore);
+                    
+                    // เพิ่มค่าลงใน Object ที่จะส่งไปบันทึก
+                    scoreData[activeSubjectId][activeClassName][uid]['total'] = totalScore;
+                    scoreData[activeSubjectId][activeClassName][uid]['grade'] = grade;
+                }
+            }
+			
 			callBackend('saveScores', scoreData)
 			.then(function(res) {
 				if(res.result === 'error') throw new Error(res.message);
 				hideLoading();
-				Swal.fire({ title: 'สำเร็จ', text: 'บันทึกเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false }); 
+				Swal.fire({ title: 'สำเร็จ', text: 'บันทึกเรียบร้อย (แยกชีตรายห้องแล้ว)', icon: 'success', timer: 1500, showConfirmButton: false }); 
 			})
 			.catch(function(e) {
 				hideLoading();
@@ -2212,53 +2434,268 @@
 
         function downloadFile(content, fileName, mimeType) { const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
 
-        window.onload = function() { 
-            showLoading();
-            callBackend('getBackendData')
-            .then(function(data) {
-                // Populate data from Backend
-                students = data.students;
-                if (data.subjects && data.subjects.length > 0) {
-                    subjects = data.subjects;
-                    // FIX: Ensure default selection
-                    if(!activeSubjectId) {
-                         activeSubjectId = subjects[0].id;
-                         if(subjects[0].classes.length > 0) {
-                             activeClassName = subjects[0].classes[0];
-                         }
-                    }
-                } else {
-                    // Default subject if none exists
-                    subjects = [{ 
-                        id: "s1", name: "เคมี 2", code: "ว31222", type: "พื้นฐาน", credits: 1.5, hours: 3.0,
-                        schoolName: "โรงเรียนปากช่อง", affiliation: "สำนักงานเขตพื้นที่การศึกษามัธยมศึกษานครราชสีมา",
-                        director: "นายประหยัด รักษ์ดี", deputyDirector: "นางสมพร มั่นคง", headEvaluation: "นายวิชัย วัดผล", headDepartment: "นางใจดี สอนวิทย์",
-                        teacher: "นายธนสาร สีรักษ์", departmentName: "วิทยาศาสตร์และเทคโนโลยี",
-                        advisors: { "ม.4/1": "นางสาวสมหญิง ใจดี", "ม.4/2": "นายบุญส่ง มุ่งมั่น" },
-                        semester: 1, year: 2568, gradeLevel: "ม.4", classes: ["ม.4/1", "ม.4/2"], 
-                        units: [{ id: 1, max: 12, passPct: 50 }, { id: 2, max: 6, passPct: 50 }, { id: 3, max: 12, passPct: 50 }], 
-                        midMax: 20, midPassPct: 50, finMax: 20, finPassPct: 50,
-                        targetSchoolPct: 60, targetDeptPct: 55, targetSubjectPct: 50,
-                        targetSchoolGPA: 3.00, targetDeptGPA: 2.55, targetSubjectGPA: 2.50
-                    }];
-                    activeSubjectId = "s1";
-                    activeClassName = "ม.4/1";
-                }
-                scoreData = data.scoreData || {};
+// --- ส่วนของระบบ Login และ Captcha (เพิ่มใหม่) ---
+    let generatedCaptcha = '';
+    let currentUser = null;
 
-                // Initialize Frontend
-                setTimeout(() => {
-                    updateGradingFilters(); updateDisplayHeader(); updateStudentFilters(); initTable(); initStudentTable(); 
-                    hideLoading();
-                }, 500);
+    function generateCaptcha() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // ตัดตัวอักษรที่สับสนง่ายออก (I, 1, O, 0)
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        generatedCaptcha = result;
+        const capEl = document.getElementById('captcha-text');
+        if(capEl) capEl.innerText = result;
+        const capIn = document.getElementById('login-captcha');
+        if(capIn) capIn.value = '';
+    }
 
-            })
-            .catch(function(e) {
-                hideLoading();
-                console.error(e);
-                Swal.fire('Error', 'Cannot connect to backend: ' + e.message, 'error');
+    // ฟังก์ชันล้างค่าฟอร์ม Login (ปรับปรุงให้ล้าง Style สีแดงด้วย)
+    function clearLoginForm() {
+        const inputs = ['login-username', 'login-password', 'login-captcha'];
+        inputs.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.value = '';
+                // รีเซ็ต Style กลับเป็นปกติ
+                el.classList.remove('border-red-500', 'bg-red-50');
+                el.classList.add('border-slate-200', 'bg-slate-50');
+            }
+        });
+        generateCaptcha();
+    }
+
+// ฟังก์ชันตรวจสอบและเข้าสู่ระบบ (แก้ไขเพิ่ม Loading Overlay)
+    function performLogin(btn) {
+        const userEl = document.getElementById('login-username');
+        const passEl = document.getElementById('login-password');
+        const captEl = document.getElementById('login-captcha');
+        
+        const userIn = userEl.value.trim();
+        const passIn = passEl.value.trim();
+        const captIn = captEl.value.trim().toUpperCase();
+
+        // 1. รีเซ็ต Style เดิมก่อนเริ่มตรวจสอบ
+        [userEl, passEl, captEl].forEach(el => {
+            el.classList.remove('border-red-500', 'bg-red-50');
+            el.classList.add('border-slate-200', 'bg-slate-50');
+        });
+
+        // 2. ตรวจสอบข้อมูลว่าง
+        let isValid = true;
+        if (!userIn) {
+            userEl.classList.remove('border-slate-200', 'bg-slate-50');
+            userEl.classList.add('border-red-500', 'bg-red-50');
+            isValid = false;
+        }
+        if (!passIn) {
+            passEl.classList.remove('border-slate-200', 'bg-slate-50');
+            passEl.classList.add('border-red-500', 'bg-red-50');
+            isValid = false;
+        }
+        if (!captIn) {
+            captEl.classList.remove('border-slate-200', 'bg-slate-50');
+            captEl.classList.add('border-red-500', 'bg-red-50');
+            isValid = false;
+        }
+
+        if (!isValid) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ข้อมูลไม่ครบถ้วน',
+                text: 'กรุณาระบุ ชื่อผู้ใช้, รหัสผ่าน และรหัส CAPTCHA ให้ครบ',
+                confirmButtonColor: '#0d6efd',
+                confirmButtonText: 'ตกลง'
             });
-        };
-    </script>
+            return;
+        }
+
+        // 3. ตรวจสอบ CAPTCHA
+        if (captIn !== generatedCaptcha) {
+            captEl.classList.remove('border-slate-200', 'bg-slate-50');
+            captEl.classList.add('border-red-500', 'bg-red-50');
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'รหัส CAPTCHA ไม่ถูกต้อง',
+                text: 'กรุณาตรวจสอบรหัสความปลอดภัยอีกครั้ง',
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'ลองใหม่'
+            }).then(() => {
+                generateCaptcha();
+                captEl.value = '';
+                captEl.focus();
+            });
+            return;
+        }
+
+        // 4. ส่งข้อมูลไปตรวจสอบกับ Backend
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังตรวจสอบ...';
+        btn.disabled = true;
+        
+        // --- เพิ่มส่วนนี้: แสดง Loading Overlay ---
+        showLoading(); 
+        // ------------------------------------
+
+callBackend('login', { username: userIn, password: passIn })
+        .then(res => {
+            // 1. ลบ hideLoading() บรรทัดนี้ออก (เพื่อให้ฉากหลังยังหมุนอยู่)
+            
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (res.result === 'success') {
+                currentUser = res.user;
+                document.getElementById('login-modal').classList.add('hidden'); 
+                
+                // 2. แสดง SweetAlert (ตอนนี้จะอยู่บน Loading Overlay แล้วเพราะแก้ CSS ข้อ 1)
+                Swal.fire({
+                    icon: 'success',
+                    title: 'เข้าสู่ระบบสำเร็จ',
+                    text: `ยินดีต้อนรับ คุณ ${currentUser.name} (${currentUser.role})`,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    // 3. เมื่อ SweetAlert หายไป ค่อยสั่งซ่อน Loading หรือโหลดข้อมูลต่อ
+                    // ในที่นี้ loadSystemData() จะจัดการเรื่อง Loading ต่อเอง
+                    loadSystemData(); 
+                });
+                
+            } else {
+                // กรณี Error สั่งซ่อน Loading ได้เลย
+                hideLoading();
+
+                userEl.classList.remove('border-slate-200', 'bg-slate-50');
+                userEl.classList.add('border-red-500', 'bg-red-50');
+                
+                passEl.classList.remove('border-slate-200', 'bg-slate-50');
+                passEl.classList.add('border-red-500', 'bg-red-50');
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เข้าสู่ระบบไม่สำเร็จ',
+                    text: res.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+                    confirmButtonColor: '#dc3545',
+                    confirmButtonText: 'ลองใหม่'
+                }).then(() => {
+                    generateCaptcha();
+                    passEl.value = ''; 
+                });
+            }
+        })
+        .catch(err => {
+            // [แก้ไขจุดที่ 3] : กรณีเกิด Error ก็ต้องซ่อน Loading ก่อนเช่นกัน
+            hideLoading();
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            
+            Swal.fire('System Error', err.message, 'error');
+        });
+    }
+
+    // --- แก้ไข window.onload เป็นแบบใหม่ ---
+    window.onload = function() {
+        // 1. สร้าง Captcha ทันทีที่เปิดเว็บ
+        generateCaptcha();
+        
+        // 2. แสดง Login Modal (เอา class hidden ออก)
+        document.getElementById('login-modal').classList.remove('hidden');
+        
+        // *หมายเหตุ: เราจะไม่เรียก getBackendData ที่นี่แล้ว จะย้ายไปใน loadSystemData แทน
+    };
+
+    // --- ฟังก์ชันโหลดข้อมูล (ย้ายโค้ดเดิมจาก window.onload มาไว้ที่นี่) ---
+    function loadSystemData() {
+        showLoading();
+        callBackend('getBackendData')
+        .then(function(data) {
+            // Populate data from Backend
+            students = data.students;
+            if (data.subjects && data.subjects.length > 0) {
+                subjects = data.subjects;
+                // FIX: Ensure default selection
+                if(!activeSubjectId) {
+                     activeSubjectId = subjects[0].id;
+                     if(subjects[0].classes.length > 0) {
+                         activeClassName = subjects[0].classes[0];
+                     }
+                }
+            } else {
+                // Default subject if none exists (ใช้ข้อมูล Mockup เดิมของคุณ)
+                subjects = [{ 
+                    id: "s1", name: "เคมี 2", code: "ว31222", type: "พื้นฐาน", credits: 1.5, hours: 3.0,
+                    schoolName: "โรงเรียนปากช่อง", affiliation: "สำนักงานเขตพื้นที่การศึกษามัธยมศึกษานครราชสีมา",
+                    director: "นายประหยัด รักษ์ดี", deputyDirector: "นางสมพร มั่นคง", headEvaluation: "นายวิชัย วัดผล", headDepartment: "นางใจดี สอนวิทย์",
+                    teacher: "นายธนสาร สีรักษ์", departmentName: "วิทยาศาสตร์และเทคโนโลยี",
+                    advisors: { "ม.4/1": "นางสาวสมหญิง ใจดี", "ม.4/2": "นายบุญส่ง มุ่งมั่น" },
+                    semester: 1, year: 2568, gradeLevel: "ม.4", classes: ["ม.4/1", "ม.4/2"], 
+                    units: [{ id: 1, max: 12, passPct: 50 }, { id: 2, max: 6, passPct: 50 }, { id: 3, max: 12, passPct: 50 }], 
+                    midMax: 20, midPassPct: 50, finMax: 20, finPassPct: 50,
+                    targetSchoolPct: 60, targetDeptPct: 55, targetSubjectPct: 50,
+                    targetSchoolGPA: 3.00, targetDeptGPA: 2.55, targetSubjectGPA: 2.50
+                }];
+                activeSubjectId = "s1";
+                activeClassName = "ม.4/1";
+            }
+            scoreData = data.scoreData || {};
+
+            // Initialize Frontend
+            setTimeout(() => {
+                updateGradingFilters(); updateDisplayHeader(); updateStudentFilters(); initTable(); initStudentTable(); 
+                hideLoading();
+            }, 500);
+
+        })
+        .catch(function(e) {
+            hideLoading();
+            console.error(e);
+            Swal.fire('Error', 'Cannot connect to backend: ' + e.message, 'error');
+        });
+    }
+
+
+    // ฟังก์ชันออกจากระบบ (เพิ่มใหม่)
+    function logoutSystem() {
+        Swal.fire({
+            title: 'ยืนยันการออกจากระบบ?',
+            text: "คุณต้องการออกจากระบบใช่หรือไม่",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ออกจากระบบ',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ส่ง Log ไปยัง Backend (ถ้ามี user login อยู่)
+                if (currentUser && currentUser.username) {
+                    // ส่ง request แบบไม่รอผลลัพธ์ (Fire and forget) เพื่อความรวดเร็ว
+                    callBackend('logout', { username: currentUser.username });
+                }
+                
+                // ล้างค่าผู้ใช้ปัจจุบัน
+                currentUser = null;
+                
+                // แสดง Modal Login อีกครั้ง
+                document.getElementById('login-modal').classList.remove('hidden');
+                
+                // ล้างฟอร์ม Login และรีเซ็ต Captcha
+                clearLoginForm();
+                
+                // แจ้งเตือน
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ออกจากระบบสำเร็จ',
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            }
+        });
+    }
+
+	</script>
 </body>
 </html>
