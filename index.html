@@ -609,8 +609,8 @@
 				<div class="bg-white w-full max-w-xl rounded-xl shadow-xl overflow-hidden border border-slate-200 p-6 transform transition-all scale-100 relative">
 					
 					<div class="text-center mb-2">
-						<div class="w-28 h-28 flex items-center justify-center mx-auto">
-							<img src="https://lh3.googleusercontent.com/d/1kggNSqMxuYIPZQs6hPt3pt7C5WbVQQIa" class="max-w-full max-h-full object-contain" alt="School Logo">
+						<div class="w-36 h-36 flex items-center justify-center mx-auto">
+							<img src="https://lh3.googleusercontent.com/d/17nowPco3WNP-0d9lFZG_VQkc-vm46mQc" class="max-w-full max-h-full object-contain" alt="School Logo">
 						</div>
 						
 						<h2 class="text-2xl font-bold text-slate-800 mb-2">KT | PP5 Online System</h2>
@@ -4292,20 +4292,39 @@ function printCover() {
 		}
 	}
 
-	// แก้ไขฟังก์ชันเปลี่ยนห้องเรียน
-	function changeActiveClass(cls) { 
-		activeClassName = cls; 
-		currentGradingPage = 1; 
-		updateDisplayHeader(); 
-		
-		// เช็คว่าอยู่หน้าไหน ให้โหลดตารางหน้านั้น
-		const activeView = document.querySelector('.view-section.view-active')?.id;
-		if (activeView === 'task-grading-view') {
-			initTaskTable();
-		} else {
-			initTable(); 
-		}
-	}
+// ฟังก์ชันเปลี่ยนห้องเรียน (ฉบับสมบูรณ์)
+function changeActiveClass(cls) { 
+    // 1. อัปเดตตัวแปร Global
+    activeClassName = cls; 
+    currentGradingPage = 1;
+
+    // 2. อัปเดตส่วนหัวทันที (ชื่อครูที่ปรึกษา, ข้อมูลวิชา)
+    // *ส่วนนี้แก้ปัญหาชื่อครูไม่เปลี่ยน*
+    updateDisplayHeader();    
+
+    // 3. ซิงค์ Dropdown ของหน้าอื่นๆ (อ่าน-คิด-เขียน, สมรรถนะ, คุณลักษณะ) ให้เป็นห้องเดียวกัน
+    // (ทำงานเมื่อมีฟังก์ชัน updateCommonDropdowns ในระบบ)
+    if (typeof updateCommonDropdowns === 'function') {
+        ['rw', 'comp', 'attr'].forEach(t => {
+            updateCommonDropdowns(`select-subject-${t}`, `select-class-${t}`);
+        });
+    }
+
+    // 4. ตรวจสอบว่ากำลังใช้งานหน้าไหนอยู่ แล้วสั่งโหลดตารางหน้านั้นใหม่
+    const activeView = document.querySelector('.view-section.view-active')?.id;
+    
+    if (activeView === 'rw-view') {
+        initRWTable();           // โหลดตาราง อ่าน-คิด-เขียน
+    } else if (activeView === 'competency-view') {
+        initCompetencyTable();   // โหลดตาราง สมรรถนะ
+    } else if (activeView === 'attribute-view') {
+        initAttributeTable();    // โหลดตาราง คุณลักษณะ
+    } else if (activeView === 'task-grading-view') {
+        initTaskTable();         // โหลดตาราง คะแนนรายชิ้นงาน
+    } else {
+        initTable();             // โหลดตาราง บันทึกคะแนนหลัก (ค่าเริ่มต้น)
+    } 
+}
 		
 	function initTable() {
 		const sub = subjects.find(s => s.id === activeSubjectId);
@@ -5061,76 +5080,63 @@ function renderHeader(sub) {
     function syncInputWidth(el) { el.style.width = ((el.value?.toString().length || 1) * 7 + 15) + 'px'; }
     
 	function saveScores() {
-		showLoading(); // แสดงสถานะกำลังโหลด
+		showLoading(); 
 		const sub = subjects.find(s => s.id === activeSubjectId);
 		if (!sub) {
-			hideLoading();
-			Swal.fire('Error', 'ไม่พบข้อมูลรายวิชา', 'error');
-			return;
+			hideLoading(); Swal.fire('Error', 'ไม่พบข้อมูลรายวิชา', 'error'); return;
 		}
 
-		// ดึงข้อมูลห้องปัจจุบัน
 		const activeView = document.querySelector('.view-section.view-active')?.id;
 		const roomData = scoreData[activeSubjectId]?.[activeClassName];
 
-		// --- [ยกเลิก] การวนลูปคำนวณ total/grade รายวิชาหลักล่วงหน้า เพื่อป้องกันข้อมูลผิดพลาด ---
-		/* ส่วนที่เคยคำนวณค่า total และ grade อัตโนมัติทุกครั้งที่กดบันทึกจะถูกตัดออก 
-		   เพื่อให้ระบบบันทึกค่าที่ผู้ใช้กรอกจริง หรือค่าที่คำนวณไว้ในหน้าจอเท่านั้น
-		*/
-
-		// --- [เพิ่ม] การตรวจสอบหน้าจอ และคำนวณผลลัพธ์ (Result) ให้ครบถ้วนก่อนบันทึก ---
 		if (roomData) {
 			for (const uid in roomData) {
-				// 1. หน้า อ่าน คิด วิเคราะห์ และเขียน (RW)
-				if (activeView === 'rw-view') {
-					let sum = 0;
-					for (let i = 1; i <= 5; i++) sum += parseInt(roomData[uid][`rw_${i}`] || 0);
-					const avg = parseFloat((sum / 5).toFixed(2));
-					const res = calEvalLevel(avg); // ใช้เกณฑ์ 0-3
-					roomData[uid]['rw_result'] = res; // บันทึกระดับตัวเลข
-					roomData[uid]['rw_assess'] = (res === 3 ? 'ดีเยี่ยม' : (res === 2 ? 'ดี' : (res === 1 ? 'ผ่าน' : 'ไม่ผ่าน')));
-				} 
-				// 2. หน้าสมรรถนะสำคัญ (Competency)
-				else if (activeView === 'competency-view') {
-					let sum = 0;
-					for (let i = 1; i <= 5; i++) sum += parseInt(roomData[uid][`comp_${i}`] || 0);
-					const avg = parseFloat((sum / 5).toFixed(2));
-					const res = calEvalLevel(avg);
-					roomData[uid]['comp_result'] = res;
-					roomData[uid]['comp_assess'] = (res === 3 ? 'ดีเยี่ยม' : (res === 2 ? 'ดี' : (res === 1 ? 'ผ่าน' : 'ไม่ผ่าน')));
-				} 
+				// ... (RW Logic) ...
+				
 				// 3. หน้าคุณลักษณะอันพึงประสงค์ (Attribute)
-				else if (activeView === 'attribute-view') {
+				if (activeView === 'attribute-view') {
 					let sum = 0;
 					let hasZero = false;
+					let countCore = 0;
+					let countExtra = 0;
+					
 					for (let i = 1; i <= 10; i++) {
 						const valStr = roomData[uid][`attr_${i}`];
-						const val = parseInt(valStr || 0);
-						// เงื่อนไขพิเศษ: ถ้ามีข้อใดข้อหนึ่งเป็น 0 ผลสรุปต้องเป็น 0 (ไม่ผ่าน) เสมอ
-						if (valStr !== "" && valStr !== undefined && val === 0) hasZero = true;
+						const val = (valStr === "" || valStr === undefined) ? 0 : parseInt(valStr);
+						
+						if (i <= 8) {
+							if (valStr !== "" && valStr !== undefined) {
+								countCore++;
+								if (val === 0) hasZero = true;
+							}
+						} else {
+							if (valStr !== "" && valStr !== undefined) countExtra++;
+						}
 						sum += val;
 					}
-					const avg = parseFloat((sum / 10).toFixed(2));
-					let res = calEvalLevel(avg);
-					if (hasZero) res = 0; 
-					roomData[uid]['attr_result'] = res;
-					roomData[uid]['attr_assess'] = (res === 3 ? 'ดีเยี่ยม' : (res === 2 ? 'ดี' : (res === 1 ? 'ผ่าน' : 'ไม่ผ่าน')));
+					
+					// ต้องครบ 8 ข้อถึงจะบันทึกผล
+					if (countCore === 8) {
+						let divisor = 8 + countExtra;
+						const avg = parseFloat((sum / divisor).toFixed(2));
+						let res = calEvalLevel(avg);
+						if (hasZero) res = 0;
+
+						roomData[uid]['attr_result'] = res;
+						roomData[uid]['attr_assess'] = (res === 3 ? 'ดีเยี่ยม' : (res === 2 ? 'ดี' : (res === 1 ? 'ผ่าน' : 'ไม่ผ่าน')));
+					} else {
+						// ถ้าไม่ครบ อาจจะล้างค่า หรือปล่อยไว้ (เลือกปล่อยไว้เพื่อความปลอดภัย)
+						// roomData[uid]['attr_result'] = ""; 
+					}
 				}
 			}
 		}
 
-		// เรียกใช้ Backend เพื่อบันทึกข้อมูล
 		callBackend('saveScores', scoreData)
 			.then(function(res) {
 				if(res.result === 'error') throw new Error(res.message);
 				hideLoading();
-				Swal.fire({ 
-					title: 'สำเร็จ', 
-					text: 'บันทึกข้อมูลลงชีตเรียบร้อยแล้ว', 
-					icon: 'success', 
-					timer: 1500, 
-					showConfirmButton: false 
-				});
+				Swal.fire({ title: 'สำเร็จ', text: 'บันทึกข้อมูลเรียบร้อย', icon: 'success', timer: 1500, showConfirmButton: false });
 			})
 			.catch(function(e) {
 				hideLoading();
@@ -7075,20 +7081,7 @@ function renderTaskHeader(sub) {
 		activeSubjectId = id; 
 		currentGradingPage = 1; 
 		updateGradingFilters(); 
-		// Sync dropdowns หน้าใหม่
-		['rw', 'comp', 'attr'].forEach(t => updateCommonDropdowns(`select-subject-${t}`, `select-class-${t}`)); 
-
-		const activeView = document.querySelector('.view-section.view-active')?.id;
-		if (activeView === 'rw-view') initRWTable();
-		else if (activeView === 'competency-view') initCompetencyTable();
-		else if (activeView === 'attribute-view') initAttributeTable();
-		else if (activeView === 'task-grading-view') initTaskTable();
-		else initTable(); 
-	}
-
-	function changeActiveClass(cls) { 
-		activeClassName = cls; 
-		currentGradingPage = 1; 
+		updateDisplayHeader();
 		// Sync dropdowns หน้าใหม่
 		['rw', 'comp', 'attr'].forEach(t => updateCommonDropdowns(`select-subject-${t}`, `select-class-${t}`)); 
 
@@ -7201,56 +7194,108 @@ function renderTaskHeader(sub) {
 	}
 
 	// 6. ฟังก์ชันประมวลผลการใส่คะแนนรวดเร็ว
-	function applyBulkScore(viewType) {
-		const scoreEl = document.querySelector(`input[name="bulkScore-${viewType}"]:checked`);
-		if (!scoreEl) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกคะแนน (3, 2, 1, 0)', 'warning'); return; }
-		
-		const scoreVal = scoreEl.value;
-		
-		// หาข้อที่ถูกเลือก
-		const selectedItems = Array.from(document.querySelectorAll(`.bulk-item-${viewType}:checked`)).map(cb => cb.value);
-		
-		if (selectedItems.length === 0) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกข้อที่ต้องการให้คะแนน', 'warning'); return; }
+function applyBulkScore(viewType) {
+    // 1. ตรวจสอบว่าเลือกคะแนนหรือยัง
+    const scoreEl = document.querySelector(`input[name="bulkScore-${viewType}"]:checked`);
+    if (!scoreEl) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกคะแนน (3, 2, 1, 0)', 'warning'); return; }
+    
+    const scoreVal = parseInt(scoreEl.value);
+    
+    // 2. ตรวจสอบว่าเลือกข้อหรือยัง
+    const selectedItems = Array.from(document.querySelectorAll(`.bulk-item-${viewType}:checked`)).map(cb => cb.value);
+    if (selectedItems.length === 0) { Swal.fire('แจ้งเตือน', 'กรุณาเลือกข้อที่ต้องการให้คะแนน', 'warning'); return; }
 
-		showLoading();
-		
-		setTimeout(() => {
-			// ดึงนักเรียนทั้งหมดในห้องปัจจุบัน
-			const students = getActiveStudentsInClass(activeClassName);
-			let prefix = '';
-			if (viewType === 'rw') prefix = 'rw_';
-			if (viewType === 'comp') prefix = 'comp_';
-			if (viewType === 'attr') prefix = 'attr_';
+    showLoading();
+    
+    setTimeout(() => {
+        const students = getActiveStudentsInClass(activeClassName);
+        let prefix = '';
+        if (viewType === 'rw') prefix = 'rw_';
+        else if (viewType === 'comp') prefix = 'comp_';
+        else if (viewType === 'attr') prefix = 'attr_';
 
-			students.forEach(s => {
-				selectedItems.forEach(itemIdx => {
-					const fieldName = `${prefix}${itemIdx}`;
-					
-					// 1. อัปเดต Memory
-					if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
-					if (!scoreData[activeSubjectId][activeClassName]) scoreData[activeSubjectId][activeClassName] = {};
-					if (!scoreData[activeSubjectId][activeClassName][s.uid]) scoreData[activeSubjectId][activeClassName][s.uid] = {};
-					
-					scoreData[activeSubjectId][activeClassName][s.uid][fieldName] = scoreVal;
-				});
-				
-				// คำนวณผลรวมใหม่อัตโนมัติ (Trigger calculation)
-				// ต้องจำลองการเรียกฟังก์ชันคำนวณของแต่ละหน้า
-				if(viewType === 'rw') { 
-					// จำลองการหา Global Index เพื่อ update UI (อาจจะไม่แม่นยำ 100% ถ้าแบ่งหน้า แต่ข้อมูล Memory ถูกต้อง)
-					// เพื่อความง่าย: เราจะรีเฟรชตารางใหม่ทั้งหมดตอนจบ
-				}
-			});
+        students.forEach(s => {
+            // เตรียมพื้นที่เก็บข้อมูล (Memory)
+            if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
+            if (!scoreData[activeSubjectId][activeClassName]) scoreData[activeSubjectId][activeClassName] = {};
+            if (!scoreData[activeSubjectId][activeClassName][s.uid]) scoreData[activeSubjectId][activeClassName][s.uid] = {};
+            
+            const studentData = scoreData[activeSubjectId][activeClassName][s.uid];
 
-			// รีเฟรชตารางเพื่อแสดงผลใหม่
-			if (viewType === 'rw') initRWTable();
-			if (viewType === 'comp') initCompetencyTable();
-			if (viewType === 'attr') initAttributeTable();
-			
-			hideLoading();
-			// Toast.fire({ icon: 'success', title: 'บันทึกคะแนนแบบกลุ่มเรียบร้อย' });
-		}, 200);
-	}
+            // 3. บันทึกคะแนนลง Memory (ตามข้อที่ติ๊กเลือก)
+            selectedItems.forEach(itemIdx => {
+                studentData[`${prefix}${itemIdx}`] = scoreVal;
+            });
+
+            // ==========================================================
+            // 4. สั่งคำนวณผลประเมินทันที (Real-time Calculation)
+            // ==========================================================
+            if (viewType === 'attr') {
+                let sum = 0;
+                let hasZeroCore = false; // ตัวแปรเช็ค 0 เฉพาะข้อ 1-8
+                let countCore = 0;       // นับข้อ 1-8
+                let countExtra = 0;      // นับข้อ 9-10
+
+                // วนลูป 1-10 เพื่อดึงคะแนนทั้งหมด (ทั้งที่เพิ่งใส่และที่มีอยู่เดิม)
+                for (let i = 1; i <= 10; i++) {
+                    let val = studentData[`attr_${i}`];
+                    
+                    if (val !== undefined && val !== "") {
+                        val = parseInt(val);
+                        sum += val; // บวกคะแนนรวมทั้งหมดที่มี
+
+                        if (i <= 8) {
+                            countCore++;
+                            // เช็คเงื่อนไขตก (0) เฉพาะข้อ 1-8
+                            if (val === 0) hasZeroCore = true;
+                        } else {
+                            countExtra++;
+                            // ข้อ 9-10: ไม่ต้องเช็ค hasZero (เป็น 0 ได้ ไม่ตก)
+                        }
+                    }
+                }
+
+                // --- เงื่อนไขสำคัญ: ถ้ากรอกข้อ 1-8 ครบ ให้ประมวลผลทันที ---
+                if (countCore === 8) {
+                    // ตัวหาร = 8 + ข้อเสริมที่มีคะแนน (ถ้าข้อ 9-10 ว่าง ก็หาร 8)
+                    let divisor = 8 + countExtra;
+                    
+                    let avg = parseFloat((sum / divisor).toFixed(2));
+                    let res = calEvalLevel(avg);
+
+                    // ถ้ามี 0 ในข้อ 1-8 ให้ปรับตกทันที
+                    if (hasZeroCore) res = 0;
+
+                    // บันทึกผลลัพธ์ลง Memory (เพื่อให้ initAttributeTable ดึงไปแสดง)
+                    studentData['attr_result'] = res;
+                    studentData['attr_assess'] = (res === 3 ? 'ดีเยี่ยม' : (res === 2 ? 'ดี' : (res === 1 ? 'ผ่าน' : 'ไม่ผ่าน')));
+                }
+            } 
+            
+            // --- ส่วนของ RW และ Comp (คำนวณตามปกติ) ---
+            else if (viewType === 'rw' || viewType === 'comp') {
+                let sum = 0, count = 0, max = 5;
+                for(let i=1; i<=max; i++) {
+                    let v = studentData[`${prefix}${i}`];
+                    if(v !== undefined && v !== "") { sum += parseInt(v); count++; }
+                }
+                // ถ้ามีคะแนนอย่างน้อย 1 ช่อง หรือครบตามต้องการ
+                if(count > 0) { 
+                    let avg = parseFloat((sum / max).toFixed(2)); // หารด้วยจำนวนเต็มเสมอ
+                    let res = calEvalLevel(avg);
+                    studentData[`${viewType}_result`] = res;
+                }
+            }
+        });
+
+        // 5. รีเฟรชตาราง (ตารางจะดึงผลลัพธ์จาก Memory มาแสดงทันที)
+        if (viewType === 'rw') initRWTable();
+        else if (viewType === 'comp') initCompetencyTable();
+        else if (viewType === 'attr') initAttributeTable();
+
+        hideLoading();
+    }, 200);
+}
 
 
 
@@ -7545,15 +7590,18 @@ function autoSumComp(uid, idx) {
 function initAttributeTable() {
     const sub = subjects.find(s => s.id === activeSubjectId);
     if (!sub) return;
+    
+    // แสดงชื่อครูที่ปรึกษา
     document.getElementById('display-advisor-attr').innerText = (sub.advisors && sub.advisors[activeClassName]) ? sub.advisors[activeClassName] : "-";
+    
     const students = getActiveStudentsInClass(activeClassName);
 
-    // --- ส่วนจัดการปุ่มควบคุม (แก้ไขเพิ่ม Switch ใหม่) ---
+    // --- [1] ส่วนจัดการปุ่มควบคุม (Pagination & Quick Controls) ---
     const controlsContainer = document.getElementById('attr-pagination-controls')?.parentElement;
     if (controlsContainer) {
         const btnGroup = controlsContainer.querySelector('.flex.items-center.gap-2');
         if(btnGroup) {
-            // 1. Switch แสดงทั้งหมด
+            // สวิตช์: แสดงทั้งหมด
             if (!btnGroup.querySelector('.switch-show-all')) {
                 btnGroup.insertAdjacentHTML('beforeend', `
                     <div class="flex items-center ml-4 pl-4 border-l border-slate-300 h-8 no-print switch-show-all">
@@ -7565,20 +7613,22 @@ function initAttributeTable() {
                     </div>
                 `);
             }
-			// ค้นหาใน initAttributeTable()
-			if (!btnGroup.querySelector('.switch-auto-grade-attr')) {
-				btnGroup.insertAdjacentHTML('beforeend', `
-					<div class="flex items-center ml-4 pl-4 border-l border-slate-300 h-8 no-print switch-auto-grade-attr">
-						<label class="relative inline-flex items-center cursor-pointer group" title="บันทึกคะแนนทุกข้อโดยอิงจากเกรดเฉลี่ย">
-							<input type="checkbox" class="sr-only peer" onchange="if(this.checked) { autoFillByGrade('attr'); this.checked = false; }">
-							<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
-							<span class="ml-2 text-sm font-bold text-slate-600 group-hover:text-amber-600 transition-colors">ประมวลผลด่วน (อิงเกรด)</span>
-						</label>
-					</div>
-				`);
-			}
+            
+            // สวิตช์: ประมวลผลด่วน (อิงเกรด) - **เพิ่มใหม่ที่นี่**
+            if (!btnGroup.querySelector('.switch-auto-grade-attr')) {
+                btnGroup.insertAdjacentHTML('beforeend', `
+                    <div class="flex items-center ml-4 pl-4 border-l border-slate-300 h-8 no-print switch-auto-grade-attr">
+                        <label class="relative inline-flex items-center cursor-pointer group" title="ประมวลผลคะแนน 1-10 อัตโนมัติโดยอิงจากเกรดเฉลี่ยของนักเรียน">
+                            <input type="checkbox" class="sr-only peer" onchange="if(this.checked) { autoFillByGrade('attr'); this.checked = false; }">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                            <span class="ml-2 text-sm font-bold text-slate-600 group-hover:text-amber-600 transition-colors">ประมวลผลด่วน (อิงเกรด)</span>
+                        </label>
+                    </div>
+                `);
+            }
         }
-        // ... (Bulk Control) ...
+        
+        // แถบให้คะแนนแบบเร็ว (Bulk Score)
         const oldBulk = document.getElementById('bulk-attr-container');
         if(oldBulk) oldBulk.remove();
         const bulkDiv = document.createElement('div');
@@ -7588,17 +7638,14 @@ function initAttributeTable() {
         controlsContainer.after(bulkDiv);
     }
 
-    // ... (ส่วน Pagination และ Render ตาราง คงเดิม) ...
+    // --- [2] ส่วนจัดการการแบ่งหน้า (Pagination) ---
     let start = (currentGradingPage - 1) * rowsPerPage;
     let limit = rowsPerPage;
     if (typeof isShowAllRows !== 'undefined' && isShowAllRows) {
-        start = 0; limit = students.length;
+        start = 0;
+        limit = students.length;
         const infoEl = document.getElementById('attr-pagination-info');
         if(infoEl) infoEl.innerText = `แสดงทั้งหมด (${students.length} คน)`;
-        const ctrlEl = document.getElementById('attr-pagination-controls');
-        if(ctrlEl) {
-             ctrlEl.innerHTML = `<button disabled class="pagination-btn px-3 py-1 border rounded bg-slate-50 text-slate-400 cursor-not-allowed shadow-sm font-bold text-xs flex items-center gap-1 opacity-50"><i class="fa-solid fa-chevron-left text-[10px]"></i> ก่อนหน้า</button><button class="px-3 py-1 border rounded bg-[#0d6efd] text-white font-bold text-xs">1</button><button disabled class="pagination-btn px-3 py-1 border rounded bg-slate-50 text-slate-400 cursor-not-allowed shadow-sm font-bold text-xs flex items-center gap-1 opacity-50">ถัดไป <i class="fa-solid fa-chevron-right text-[10px]"></i></button>`;
-        }
     } else {
         renderGeneralPagination('attr-pagination', students.length, currentGradingPage, p => {
             currentGradingPage = p;
@@ -7607,74 +7654,141 @@ function initAttributeTable() {
     }
 
     const list = students.slice(start, start + limit);
+
+    // --- [3] วาดส่วนหัวตาราง (Header) ---
     const header = document.getElementById('attrTableHeader');
     let cols = '';
     for(let i=1; i<=10; i++) {
-        cols += `<th class="px-2 py-3 text-center border-r bg-pink-50 min-w-[40px]"><div class="text-pink-800 text-xs mb-1">ข้อ ${i}</div><div class="bg-white rounded-full text-[10px] border border-pink-200 shadow-sm mx-auto w-6">3</div></th>`;
+        let bgColor = i > 8 ? 'bg-amber-50' : 'bg-pink-50';
+        let textColor = i > 8 ? 'text-amber-800' : 'text-pink-800';
+        cols += `<th class="px-2 py-3 text-center border-r ${bgColor} min-w-[40px]"><div class="${textColor} text-[10px] mb-1">ข้อ ${i} ${i>8?'(เสริม)':''}</div><div class="bg-white rounded-full text-[10px] border border-pink-200 shadow-sm mx-auto w-6">3</div></th>`;
     }
-    header.innerHTML = `<tr><th class="px-2 py-6 text-center w-8 border-r text-sm font-bold">ที่</th><th class="px-2 py-6 w-10 text-center border-r text-sm font-bold print:hidden">รูป</th><th class="px-2 py-6 w-20 border-r text-center text-sm font-bold">รหัส</th><th class="px-2 py-6 w-48 border-r text-center text-sm font-bold">ชื่อ-นามสกุล</th>${cols}<th class="px-2 py-6 w-16 text-center border-r bg-gray-50 font-bold">รวม</th><th class="px-2 py-6 w-16 text-center border-r bg-purple-50 font-bold text-purple-900">เฉลี่ย</th><th class="px-2 py-6 w-20 text-center border-r bg-gray-50 font-bold">ผลประเมิน</th><th class="px-2 py-6 w-24 text-center border-r bg-gray-50 font-bold">ระดับคุณภาพ</th></tr>`;
+    header.innerHTML = `<tr><th class="px-2 py-6 text-center w-8 border-r text-sm font-bold">ที่</th><th class="px-2 py-6 w-10 text-center border-r text-sm font-bold print:hidden">รูป</th><th class="px-2 py-6 w-20 border-r text-center text-sm font-bold">รหัส</th><th class="px-2 py-6 w-48 border-r text-center text-sm font-bold">ชื่อ-นามสกุล</th>${cols}<th class="px-2 py-6 w-16 text-center border-r bg-gray-50 font-bold">รวม</th><th class="px-2 py-6 w-16 text-center border-r bg-purple-50 font-bold text-purple-900">เฉลี่ย(1-8)</th><th class="px-2 py-6 w-20 text-center border-r bg-gray-50 font-bold">ผลประเมิน</th><th class="px-2 py-6 w-24 text-center border-r bg-gray-50 font-bold">ระดับคุณภาพ</th></tr>`;
 
+    // --- [4] วาดส่วนเนื้อหาตาราง (Body) ---
     const tbody = document.getElementById('attrTableBody');
     if(list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="100%" class="text-center py-8 text-red-500 font-bold">...ไม่พบข้อมูลนักเรียนในห้องนี้...</td></tr>`;
         return;
     }
+
     tbody.innerHTML = list.map((s, idx) => {
         const globalIdx = start + idx;
         let inputs = '';
-        let sum = 0;
-        let hasZero = false;
+        let sumTotal = 0;      // รวมข้อ 1-10
+        let sumCore = 0;       // รวมข้อ 1-8 (เพื่อนำไปเฉลี่ย)
+        let hasZeroCore = false; // เช็ค 0 ในข้อ 1-8
+
         for(let i=1; i<=10; i++) {
             let rawVal = getStoredScore(activeSubjectId, activeClassName, s.uid, `attr_${i}`, "");
             let val = rawVal === "" ? 0 : parseInt(rawVal);
-            if(val === 0) hasZero = true;
-            sum += val;
+            
+            sumTotal += val;
+
+            if (i <= 8) {
+                sumCore += val;
+                if (rawVal !== "" && val === 0) hasZeroCore = true;
+            }
+
             inputs += `<td class="p-1 text-center border-r"><input type="number" min="0" max="3" value="${rawVal}" data-row="${idx}" data-col="attr_${i}" data-uid="${s.uid}" data-idx="${globalIdx}" onkeydown="handleInputKeydown(event)" onpaste="handlePaste(event)" onfocus="this.select()" oninput="updateInputColor(this); updateScore(this, '${s.uid}', 'attr_${i}', this.value, ${globalIdx}); autoSumAttr('${s.uid}', ${globalIdx})" class="input-score text-center border rounded-full w-[28px] h-[26px] text-xs font-bold shadow-sm focus:ring-2 focus:ring-pink-300 outline-none ${getScoreClass(rawVal)}"></td>`;
         }
-        let avg = (sum / 10).toFixed(2);
+
+        // คำนวณค่าเฉลี่ย (คิดเฉพาะข้อบังคับ 8 ข้อ)
+        let avg = (sumCore / 8).toFixed(2);
+        
+        // ตัดเกรด (3, 2, 1, 0)
         let result = calEvalLevel(parseFloat(avg));
-        if (hasZero) result = 0;
-        let qText = result===3?'ดีเยี่ยม':(result===2?'ระดับดี':(result===1?'ระดับผ่าน':'ไม่ผ่าน'));
-        let qColor = result===3?'text-green-600':(result===0?'text-red-600':'text-gray-800');
-        return `<tr class="grading-row border-b odd:bg-white even:bg-[#FCE4EC] hover:bg-pink-50 transition-colors"><td class="px-2 py-1 text-center text-gray-400 border-r text-[11px] font-bold">${globalIdx + 1}</td><td class="px-1 py-1 border-r text-center print:hidden"><div onclick="viewStudentPhoto('${s.uid}')" class="student-photo-container w-6 h-6 bg-slate-100 rounded-full mx-auto overflow-hidden border cursor-pointer transition-transform">${s.image ? `<img src="${s.image}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-user text-[10px] text-slate-300 mt-1"></i>'}</div></td><td class="px-2 py-1 text-gray-600 border-r text-[11px] text-center font-bold">${s.id}</td><td class="px-2 py-1 text-gray-700 border-r text-[11px] truncate max-w-[200px] font-bold text-left">${s.name}</td>${inputs}<td class="text-center font-bold bg-gray-50 text-slate-600 border-r" id="attr-sum-${globalIdx}">${sum}</td><td class="text-center font-bold text-purple-700 bg-purple-50 border-r" id="attr-avg-${globalIdx}">${avg}</td><td class="text-center border-r font-bold ${result===3?'text-green-600 bg-green-50/20':(result===0?'text-red-600 bg-red-50/20':'text-blue-600 bg-blue-50/20')}" id="attr-result-${globalIdx}">${result}</td><td class="text-center border-r text-sm font-bold ${qColor}" id="attr-quality-${globalIdx}">${qText}</td></tr>`;
+        
+        // เงื่อนไข: ถ้าข้อ 1-8 มีใครได้ 0 แม้แต่ข้อเดียว ให้ตก (0) ทันที
+        if (hasZeroCore) result = 0;
+
+        let qText = result === 3 ? 'ดีเยี่ยม' : (result === 2 ? 'ดี' : (result === 1 ? 'ผ่าน' : 'ไม่ผ่าน'));
+        let qColor = result === 3 ? 'text-green-600' : (result === 0 ? 'text-red-600' : 'text-gray-800');
+
+        return `<tr class="grading-row border-b odd:bg-white even:bg-[#FCE4EC] hover:bg-pink-50 transition-colors">
+            <td class="px-2 py-1 text-center text-gray-400 border-r text-[11px] font-bold">${globalIdx + 1}</td>
+            <td class="px-1 py-1 border-r text-center print:hidden"><div onclick="viewStudentPhoto('${s.uid}')" class="student-photo-container w-6 h-6 bg-slate-100 rounded-full mx-auto overflow-hidden border cursor-pointer transition-transform">${s.image ? `<img src="${s.image}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-user text-[10px] text-slate-300 mt-1"></i>'}</div></td>
+            <td class="px-2 py-1 text-gray-600 border-r text-[11px] text-center font-bold">${s.id}</td>
+            <td class="px-2 py-1 text-gray-700 border-r text-[11px] truncate max-w-[200px] font-bold text-left">${s.name}</td>
+            ${inputs}
+            <td class="text-center font-bold bg-gray-50 text-slate-600 border-r" id="attr-sum-${globalIdx}">${sumTotal}</td>
+            <td class="text-center font-bold text-purple-700 bg-purple-50 border-r" id="attr-avg-${globalIdx}">${avg}</td>
+            <td class="text-center border-r font-bold ${result === 3 ? 'text-green-600 bg-green-50/20' : (result === 0 ? 'text-red-600 bg-red-50/20' : 'text-blue-600 bg-blue-50/20')}" id="attr-result-${globalIdx}">${result}</td>
+            <td class="text-center border-r text-sm font-bold ${qColor}" id="attr-quality-${globalIdx}">${qText}</td>
+        </tr>`;
     }).join('');
-    
+
+    // อัปเดตสรุปผลท้ายห้อง
     refreshRoomSummary('attr');
 }
 
 function autoSumAttr(uid, idx) {
     let sum = 0;
     let hasZero = false;
+    let countCore = 0;   // นับจำนวนข้อ 1-8 ที่กรอกแล้ว
+    let countExtra = 0;  // นับจำนวนข้อ 9-10 ที่กรอกแล้ว
+
     for(let i=1; i<=10; i++) {
-        let val = parseInt(getStoredScore(activeSubjectId, activeClassName, uid, `attr_${i}`, 0));
-        if(val === 0) hasZero = true;
+        let valStr = getStoredScore(activeSubjectId, activeClassName, uid, `attr_${i}`, "");
+        let val = (valStr === "" || valStr === undefined) ? 0 : parseInt(valStr);
+        
+        if (i <= 8) {
+            // เช็คข้อหลัก 1-8
+            if (valStr !== "") countCore++;
+            if (valStr !== "" && val === 0) hasZero = true; // กฎ 0 ตก
+        } else {
+            // เช็คข้อเสริม 9-10
+            if (valStr !== "") countExtra++;
+        }
+        
         sum += val;
     }
-    const avg = (sum / 10).toFixed(2);
-    let result = calEvalLevel(parseFloat(avg));
-    if(hasZero) result = 0;
-    
-    document.getElementById(`attr-sum-${idx}`).innerText = sum;
-    document.getElementById(`attr-avg-${idx}`).innerText = avg;
-    
-    const resCell = document.getElementById(`attr-result-${idx}`); // แก้ไข ID
-    if(resCell) {
-        resCell.innerText = result;
-        resCell.className = `text-center border-r font-bold ${result===3?'text-green-600 bg-green-50/20':(result===0?'text-red-600 bg-red-50/20':'text-blue-600 bg-blue-50/20')}`;
-    }
-    
-    const qCell = document.getElementById(`attr-quality-${idx}`); // แก้ไข ID
-    if(qCell) {
-        let qText = result===3?'ดีเยี่ยม':(result===2?'ระดับดี':(result===1?'ระดับผ่าน':'ไม่ผ่าน'));
-        let qColor = result===3?'text-green-600':(result===0?'text-red-600':'text-gray-800');
-        qCell.innerText = qText;
-        qCell.className = `text-center border-r text-sm font-bold ${qColor}`;
-    }
 
-    // บันทึกผลลง memory ทันที
-    if (!scoreData[activeSubjectId][activeClassName][uid]) scoreData[activeSubjectId][activeClassName][uid] = {};
-    scoreData[activeSubjectId][activeClassName][uid]['attr_result'] = result;
+    // --- เงื่อนไขการแสดงผล: ต้องกรอกข้อ 1-8 ให้ครบก่อน ---
+    if (countCore === 8) {
+        // ตัวหารคิดตามจริง: พื้นฐาน 8 + จำนวนข้อเสริมที่กรอกเพิ่ม (9 หรือ 10)
+        let divisor = 8 + countExtra; 
+        
+        const avg = (sum / divisor).toFixed(2);
+        let result = calEvalLevel(parseFloat(avg));
+        
+        if(hasZero) result = 0;
+
+        // แสดงผล
+        document.getElementById(`attr-sum-${idx}`).innerText = sum;
+        document.getElementById(`attr-avg-${idx}`).innerText = avg;
+        
+        const resCell = document.getElementById(`attr-result-${idx}`); 
+        if(resCell) {
+            resCell.innerText = result;
+            resCell.className = `text-center border-r font-bold ${result===3?'text-green-600 bg-green-50/20':(result===0?'text-red-600 bg-red-50/20':'text-blue-600 bg-blue-50/20')}`;
+        }
+        
+        const qCell = document.getElementById(`attr-quality-${idx}`);
+        if(qCell) {
+            let qText = result===3?'ดีเยี่ยม':(result===2?'ระดับดี':(result===1?'ระดับผ่าน':'ไม่ผ่าน'));
+            let qColor = result===3?'text-green-600':(result===0?'text-red-600':'text-gray-800');
+            qCell.innerText = qText;
+            qCell.className = `text-center border-r text-sm font-bold ${qColor}`;
+        }
+
+        // บันทึกผลลัพธ์ลง Memory
+        if (!scoreData[activeSubjectId][activeClassName][uid]) scoreData[activeSubjectId][activeClassName][uid] = {};
+        scoreData[activeSubjectId][activeClassName][uid]['attr_result'] = result;
+        
+    } else {
+        // ถ้ายังกรอก 1-8 ไม่ครบ ให้เคลียร์ค่าหรือแสดงว่าเป็นค่าว่าง
+        document.getElementById(`attr-sum-${idx}`).innerText = sum; // ยังโชว์ผลรวมได้
+        document.getElementById(`attr-avg-${idx}`).innerText = "-";
+        
+        const resCell = document.getElementById(`attr-result-${idx}`);
+        if(resCell) { resCell.innerText = "-"; resCell.className = "text-center border-r"; }
+        
+        const qCell = document.getElementById(`attr-quality-${idx}`);
+        if(qCell) { qCell.innerText = "-"; qCell.className = "text-center border-r"; }
+    }
     
+    // อัปเดตตารางสรุปท้ายหน้า
     updateEvalSummary('attr', getActiveStudentsInClass(activeClassName), 'attr_result');
 }
 	
@@ -7752,67 +7866,81 @@ function autoSumAttr(uid, idx) {
 	
 	
    
-/* =========================================================================
-   Helper: คำนวณผลประเมินของนักเรียน "ทุกคน" ในห้อง (เพื่อให้ตารางสรุปครบถ้วน)
-   ดึงคะแนนดิบที่บันทึกไว้มาคำนวณ แล้วเก็บผลลัพธ์ลงตัวแปรระบบ
-   ========================================================================= */
-function refreshRoomSummary(type) {
-    const students = getActiveStudentsInClass(activeClassName);
-    let resultKey = '';
-    let scorePrefix = '';
-    let count = 0;
+	/* =========================================================================
+	   Helper: คำนวณผลประเมินของนักเรียน "ทุกคน" ในห้อง (เพื่อให้ตารางสรุปครบถ้วน)
+	   ดึงคะแนนดิบที่บันทึกไว้มาคำนวณ แล้วเก็บผลลัพธ์ลงตัวแปรระบบ
+	   ========================================================================= */
+	function refreshRoomSummary(type) {
+		const students = getActiveStudentsInClass(activeClassName);
+		let resultKey = '';
+		let scorePrefix = '';
+		let maxCount = 0;
 
-    // กำหนดค่าตามประเภท
-    if (type === 'rw') {
-        resultKey = 'rw_result';
-        scorePrefix = 'rw_';
-        count = 5;
-    } else if (type === 'comp') {
-        resultKey = 'comp_result';
-        scorePrefix = 'comp_';
-        count = 5;
-    } else if (type === 'attr') {
-        resultKey = 'attr_result';
-        scorePrefix = 'attr_';
-        count = 10;
-    }
+		if (type === 'rw') { resultKey = 'rw_result'; scorePrefix = 'rw_'; maxCount = 5; } 
+		else if (type === 'comp') { resultKey = 'comp_result'; scorePrefix = 'comp_'; maxCount = 5; } 
+		else if (type === 'attr') { resultKey = 'attr_result'; scorePrefix = 'attr_'; maxCount = 10; }
 
-    // วนลูปนักเรียนทุกคนในห้อง (ไม่ใช่แค่หน้าปัจจุบัน)
-    students.forEach(s => {
-        let sum = 0;
-        let hasZero = false;
-        let hasScore = false;
+		students.forEach(s => {
+			let sum = 0;
+			let hasZero = false;
+			let countCore = 0;  // สำหรับ attr 1-8
+			let countExtra = 0; // สำหรับ attr 9-10
+			let countTotal = 0; // สำหรับ rw, comp
 
-        // ดึงคะแนนดิบที่บันทึกไว้ (Recorded Scores)
-        for (let i = 1; i <= count; i++) {
-            let val = getStoredScore(activeSubjectId, activeClassName, s.uid, scorePrefix + i, "");
-            if (val !== "") {
-                hasScore = true;
-                let num = parseInt(val);
-                if (num === 0) hasZero = true;
-                sum += num;
-            }
-        }
+			for (let i = 1; i <= maxCount; i++) {
+				let valStr = getStoredScore(activeSubjectId, activeClassName, s.uid, scorePrefix + i, "");
+				let val = (valStr === "" || valStr === undefined) ? 0 : parseInt(valStr);
 
-        // ถ้ามีคะแนน ให้คำนวณผลสรุป (Result) เก็บไว้ใน memory
-        if (hasScore) {
-            let avg = sum / count;
-            let res = calEvalLevel(avg);
-            
-            // กฎพิเศษ: คุณลักษณะฯ ถ้ามี 0 ให้ตกทันที
-            if (type === 'attr' && hasZero) res = 0;
+				if (valStr !== "") {
+					countTotal++; // นับรวมทุกประเภท
+					
+					// เช็คเฉพาะ Attribute
+					if (type === 'attr') {
+						if (i <= 8) {
+							countCore++;
+							if (val === 0) hasZero = true;
+						} else {
+							countExtra++;
+						}
+					} else {
+						// ประเภทอื่น (RW, Comp) เช็ค 0 ปกติถ้ามีเงื่อนไข
+						if (val === 0) hasZero = true; 
+					}
+					
+					sum += val;
+				}
+			}
 
-            // บันทึกผลลัพธ์ลง memory (เสมือนว่าดึง field result มาจาก db)
-            if (!scoreData[activeSubjectId][activeClassName][s.uid]) {
-                scoreData[activeSubjectId][activeClassName][s.uid] = {};
-            }
-            scoreData[activeSubjectId][activeClassName][s.uid][resultKey] = res;
-        }
-    });
+			// --- Logic การตัดสินผล ---
+			let canCalculate = false;
+			let divisor = maxCount;
 
-    // อัปเดตตารางสรุปทันที
-    updateEvalSummary(type, students, resultKey);
-}
+			if (type === 'attr') {
+				// คุณลักษณะ: ต้องครบ 8 ข้อถึงจะคิด
+				if (countCore === 8) {
+					canCalculate = true;
+					divisor = 8 + countExtra;
+				}
+			} else {
+				// อ่านคิดเขียน/สมรรถนะ: ต้องครบทุกข้อ (5 ข้อ)
+				if (countTotal === maxCount) canCalculate = true;
+			}
+
+			if (canCalculate) {
+				let avg = sum / divisor;
+				let res = calEvalLevel(avg);
+
+				if (type === 'attr' && hasZero) res = 0;
+
+				if (!scoreData[activeSubjectId][activeClassName][s.uid]) {
+					scoreData[activeSubjectId][activeClassName][s.uid] = {};
+				}
+				scoreData[activeSubjectId][activeClassName][s.uid][resultKey] = res;
+			}
+		});
+
+		updateEvalSummary(type, students, resultKey);
+	}
    
    
    
