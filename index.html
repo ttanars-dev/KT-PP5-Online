@@ -16,6 +16,36 @@
 	<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
 	<script src="https://npmcdn.com/flatpickr@4.6.13/dist/l10n/th.js"></script>
     <style id="print-styles">
+	
+		/* 1. เมื่อเอาเมาส์ชี้ (Hover) */
+		.input-score:hover {
+			background-color: #dbeafe !important; /* พื้นหลังสีฟ้าอ่อน */
+			color: #1e3a8a !important;            /* ตัวหนังสือสีน้ำเงินเข้ม */
+			border: 1px solid #3b82f6;            /* ขอบสีน้ำเงิน */
+			transform: scale(1.1);                /* ขยายช่องให้ใหญ่ขึ้นนิดนึง */
+			z-index: 50;                          /* ให้ลอยอยู่เหนือช่องอื่น */
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* ใส่เงา */
+			cursor: text;
+		}
+
+		/* 2. เมื่อคลิกเพื่อพิมพ์ (Focus/Active) */
+		.input-score:focus {
+			background-color: #ffffff !important; /* พื้นหลังสีขาว (เพื่อให้เห็นตัวเลขชัดที่สุด) */
+			color: #000000 !important;            /* ตัวหนังสือสีดำสนิท */
+			font-weight: bold !important;         /* ตัวหนา */
+			border: 2px solid #2563eb !important; /* ขอบสีน้ำเงินเข้มเน้นๆ */
+			outline: none;                        /* ลบขอบ Default ของ Browser */
+			box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); /* แสงฟุ้งรอบๆ ช่อง */
+			z-index: 51;
+			transform: scale(1.1);
+		}
+		
+		/* เพิ่ม Transition ให้สีเปลี่ยนนุ่มนวล */
+		.input-score {
+			transition: all 0.2s ease-in-out;
+		}
+	
+	
 		/* จัดกึ่งกลางหัวตารางหน้าบันทึกคะแนนงาน */
 		#taskTableHeader th {
 			text-align: center !important;
@@ -1274,10 +1304,10 @@
 				</div>
 
 				<div class="flex items-center gap-2">
-					<button onclick="saveScores()" class="btn-grad-save px-6 py-1.5 text-white rounded-lg font-medium shadow-md font-['Sarabun'] font-bold text-sm uppercase hover:shadow-lg transition-all transform hover:-translate-y-0.5">
+					<button onclick="refreshGrades()" class="btn-grad-save px-6 py-1.5 text-white rounded-lg font-medium shadow-md font-['Sarabun'] font-bold text-sm uppercase hover:shadow-lg transition-all transform hover:-translate-y-0.5">
 						<i class="fa-solid fa-floppy-disk"></i> บันทึกคะแนนงาน
 					</button>
-					<button onclick="initTaskTable()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-['Sarabun'] font-bold text-sm uppercase transition-all transform hover:-translate-y-0.5">
+					<button onclick="refreshGrades()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-['Sarabun'] font-bold text-sm uppercase transition-all transform hover:-translate-y-0.5">
 						<i class="fa-solid fa-arrows-rotate"></i> รีเฟรช
 					</button>
 					<div class="flex items-center ml-4 pl-4 border-l border-slate-300 h-8 no-print">
@@ -1356,7 +1386,7 @@
 					<button onclick="saveScores()" class="btn-grad-save px-6 py-1.5 text-white rounded-lg font-bold text-sm uppercase hover:shadow-lg transition-all transform hover:-translate-y-0.5">
 						<i class="fa-solid fa-floppy-disk"></i> บันทึก
 					</button>
-					<button onclick="initRWTable()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all">
+					<button onclick="refreshGrades()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all">
 						<i class="fa-solid fa-arrows-rotate"></i> รีเฟรช
 					</button>
 				</div>
@@ -1448,7 +1478,7 @@
 				</div>
 				<div class="flex items-center gap-2">
 					<button onclick="saveScores()" class="btn-grad-save px-6 py-1.5 text-white rounded-lg font-bold text-sm uppercase hover:shadow-lg transition-all transform hover:-translate-y-0.5"><i class="fa-solid fa-floppy-disk"></i> บันทึก</button>
-					<button onclick="initCompetencyTable()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
+					<button onclick="refreshGrades()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
 				</div>
 				<div id="comp-pagination-controls" class="flex gap-1"></div>
 			</div>
@@ -1536,7 +1566,7 @@
 				</div>
 				<div class="flex items-center gap-2">
 					<button onclick="saveScores()" class="btn-grad-save px-6 py-1.5 text-white rounded-lg font-bold text-sm uppercase hover:shadow-lg transition-all transform hover:-translate-y-0.5"><i class="fa-solid fa-floppy-disk"></i> บันทึก</button>
-					<button onclick="initAttributeTable()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
+					<button onclick="refreshGrades()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-1.5 rounded-lg font-medium shadow-md font-bold text-sm uppercase transition-all"><i class="fa-solid fa-arrows-rotate"></i> รีเฟรช</button>
 				</div>
 				<div id="attr-pagination-controls" class="flex gap-1"></div>
 			</div>
@@ -4365,6 +4395,7 @@ function changeActiveClass(cls) {
 		renderHeader(sub);
 		renderRows(sub, classStudents);
 		updateAchievementSummary(sub, classStudents);
+		fixAllInputColors();
 	}
 function renderHeader(sub) {
     const header = document.getElementById('tableHeader');
@@ -4612,7 +4643,7 @@ function renderHeader(sub) {
 					if (Math.max(r, e) >= (u.max * u.passPct / 100)) passedUnitsCount++;
 				});
 			}
-			const statusIconHtml = generateStatusIcon(passedUnitsCount, sub.units ? sub.units.length : 0);
+			const statusIconHtml = generateStatusIcon(p, 100);
 
 			// ดึงคะแนนกลางภาค/ปลายภาค
 			const midR = getStoredScore(activeSubjectId, activeClassName, s.uid, 'mid_r');
@@ -4740,30 +4771,40 @@ function renderHeader(sub) {
 
 
 
+//สีปุ่มหน้าชื่อ
+function generateStatusIcon(score, maxScore = 100) {
+    let colorClass = 'text-red-500';
+    let pingClass = 'bg-red-400';
+    let iconClass = 'fa-circle-xmark';
+    let title = 'คะแนนรวมต่ำกว่าเกณฑ์';
 
-    function generateStatusIcon(passedCount, totalCount) {
-        let colorClass = 'text-red-500';
-        let pingClass = 'bg-red-400';
-        let iconClass = 'fa-circle-xmark';
-        let title = 'ไม่ผ่านเกณฑ์ทุกหน่วย';
-        if (passedCount === totalCount) {
-            colorClass = 'text-green-500';
-            pingClass = 'bg-green-400';
-            iconClass = 'fa-circle-check';
-            title = 'ผ่านเกณฑ์ทุกหน่วย';
-        } else if (passedCount > 0) {
-            colorClass = 'text-yellow-500';
-            pingClass = 'bg-yellow-400';
-            iconClass = 'fa-circle-exclamation';
-            title = 'ผ่านเกณฑ์บางหน่วย';
-        }
-        return `
-            <span class="relative inline-flex mr-1.5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${pingClass} opacity-75"></span>
-                <i class="fa-solid ${iconClass} ${colorClass} relative text-[10px]" title="${title}"></i>
-            </span>
-        `;
+    // คำนวณร้อยละ
+    const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
+
+    if (pct >= 80) {
+        colorClass = 'text-green-500';    // สีเขียว
+        pingClass = 'bg-green-400';
+        iconClass = 'fa-circle-check';
+        title = 'ยอดเยี่ยม (80-100%)';
+    } else if (pct >= 70) {
+        colorClass = 'text-emerald-500';  // สีเขียวมรกต
+        pingClass = 'bg-emerald-400';
+        iconClass = 'fa-circle-check';
+        title = 'ดีมาก (70-79%)';
+    } else if (pct >= 50) {
+        colorClass = 'text-amber-500';    // สีเหลือง/ส้ม
+        pingClass = 'bg-amber-400';
+        iconClass = 'fa-circle-half-stroke';
+        title = 'ผ่านเกณฑ์ (50-69%)';
     }
+
+    return `
+        <span class="relative inline-flex mr-1.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${pingClass} opacity-75"></span>
+            <i class="fa-solid ${iconClass} ${colorClass} relative text-[10px]" title="${title}"></i>
+        </span>
+    `;
+}
 
     function renderGeneralPagination(prefix, total, current, callback) {
         const totalPages = Math.ceil(total / rowsPerPage) || 1; 
@@ -4794,76 +4835,208 @@ function renderHeader(sub) {
 
     function getStoredScore(sid, r, uid, fid, def = 0) { return scoreData[sid]?.[r]?.[uid]?.[fid] ?? def; }
 
-	function updateScore(el, uid, col, val, idx) {
-		// 1. อัปเดตข้อมูลใน Memory
-		const cls = activeClassName;
-		if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
-		if (!scoreData[activeSubjectId][cls]) scoreData[activeSubjectId][cls] = {};
-		if (!scoreData[activeSubjectId][cls][uid]) scoreData[activeSubjectId][cls][uid] = {};
-		
-		scoreData[activeSubjectId][cls][uid][col] = val; 
+function updateScore(el, uid, col, val, idx) {
+    // 1. ดึงข้อมูลวิชา
+    const sub = subjects.find(s => s.id === activeSubjectId);
+    if (!sub) return;
 
-		// 2. คำนวณ (ส่วนเดิมของหน้า Grading หลัก) ...
-		const sub = subjects.find(s => s.id === activeSubjectId);
-		const total = calculateStudentTotal(sub, uid);
-		const pct = calculateStudentPct(sub, total);
-		const rem = getStoredScore(activeSubjectId, activeClassName, uid, 'remark', "");
-		const grade = rem || computeGrade(sub, total); 
+    // --- ส่วนตรวจสอบคะแนนเกิน (Validation) ---
+    let maxScore = 0;
+    let shouldCheck = false;
 
-		// 3. อัปเดต UI หน้าหลัก (ถ้า element มีอยู่จริง)
-		const totalEl = document.getElementById(`total-${idx}`);
-		if (totalEl) {
-			totalEl.innerText = total;
-			// ... (โค้ดอัปเดตเกรด/Progress Bar เดิม) ...
-			const pctEl = document.getElementById(`pct-${idx}`); if (pctEl) pctEl.innerText = `${pct}%`;
-			const gradeEl = document.getElementById(`grade-${idx}`); if (gradeEl) { gradeEl.innerText = grade; gradeEl.className = `px-2 py-1 text-center font-bold bg-green-50/30 border-r text-[12px] ${getGradeColor(grade)}`; }
-			const progEl = document.getElementById(`progress-${idx}`); if (progEl) { progEl.style.width = `${pct}%`; progEl.innerText = `${pct}%`; progEl.className = `${getProgressColor(pct)} text-[9px] font-bold text-white text-center p-0 leading-none rounded-full h-3.5 flex items-center justify-center transition-all duration-500 shadow-sm`; }
-		}
-		
-		// 4. บันทึกลง Backend (Debounce)
-		if(typeof debouncedSaveScores === 'function') {
-			debouncedSaveScores();
-		}
-		
-		// -----------------------------------------------------------
-		// 5. จัดการเปลี่ยนสีช่องกรอก (Color Logic)
-		// -----------------------------------------------------------
+    if (col.includes('u') && (col.endsWith('_r') || col.endsWith('_e'))) {
+        const uId = col.split('_')[0].replace('u', '');
+        const u = sub.units.find(x => x.id == uId);
+        if (u) { maxScore = u.max; shouldCheck = true; }
+    } else if (col.includes('t') && (col.endsWith('_r') || col.endsWith('_e'))) {
+        const tId = col.split('_')[0].replace('t', '');
+        const t = sub.tasks.find(x => x.id == tId);
+        if (t) { maxScore = t.max; shouldCheck = true; }
+    } else if (col.startsWith('mid')) {
+        maxScore = sub.midMax; shouldCheck = true;
+    } else if (col.startsWith('fin')) {
+        maxScore = sub.finMax; shouldCheck = true;
+    }
 
-		// กรณี: คะแนนรายหน่วย (Unit)
-		if (el && col.includes('u') && col.endsWith('_r')) {
-			const uId = col.split('_')[0].replace('u', '');
-			const u = sub.units.find(x => x.id == uId);
-			if (u) {
-				const passMark = (u.max * u.passPct) / 100;
-				if (val !== "" && parseFloat(val) < passMark) {
-					el.classList.remove('bg-white'); el.classList.add('bg-yellow-300');
-				} else {
-					el.classList.remove('bg-yellow-300'); el.classList.add('bg-white');
-				}
-			}
-		}
-		
-		// กรณี: คะแนนงาน (Task) - [ส่วนที่เพิ่มใหม่ให้รองรับ _r]
-		else if (el && col.startsWith('t') && col.endsWith('_r')) {
-			const tId = col.split('_')[0].replace('t', ''); // แยก t1_r -> 1
-			const task = sub.tasks ? sub.tasks.find(t => t.id == tId) : null;
-			
-			if (task) {
-				const passMark = (task.max * (task.passPct || 50)) / 100;
-				const numVal = parseFloat(val);
-				
-				// ถ้าค่าว่าง หรือ มากกว่าเท่ากับเกณฑ์ -> สีขาว
-				if (val === "" || numVal >= passMark) {
-					el.classList.remove('bg-yellow-300');
-					el.classList.add('bg-white');
-				} else {
-					// ถ้าน้อยกว่าเกณฑ์ -> สีเหลือง
-					el.classList.remove('bg-white');
-					el.classList.add('bg-yellow-300');
-				}
-			}
-		}
-	}
+    if (shouldCheck && val !== "" && parseFloat(val) > maxScore) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'คะแนนเกินกำหนด!',
+            text: `ช่องนี้มีคะแนนเต็ม ${maxScore} คะแนน`,
+            confirmButtonColor: '#d33',
+            timer: 1500
+        });
+        el.value = ""; val = ""; 
+        el.classList.add('input-error');
+        setTimeout(() => el.classList.remove('input-error'), 1000);
+    }
+    
+    // 2. บันทึกลง Memory
+    const cls = activeClassName;
+    if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
+    if (!scoreData[activeSubjectId][cls]) scoreData[activeSubjectId][cls] = {};
+    if (!scoreData[activeSubjectId][cls][uid]) scoreData[activeSubjectId][cls][uid] = {};
+    scoreData[activeSubjectId][cls][uid][col] = val;
+
+    // 3. คำนวณค่าต่างๆ
+    const total = calculateStudentTotal(sub, uid);
+    const pct = calculateStudentPct(sub, total);
+    const rem = getStoredScore(activeSubjectId, activeClassName, uid, 'remark', "");
+    const grade = rem || computeGrade(sub, total);
+
+    // ==========================================
+    // 4. อัปเดต UI (แก้เรื่องแถบล้น + สีตัวหนังสือชัดเจน)
+    // ==========================================
+    
+    const totalEl = document.getElementById(`total-${idx}`);
+    if (totalEl) totalEl.innerText = total;
+
+    const pctEl = document.getElementById(`pct-${idx}`);
+    if (pctEl) pctEl.innerText = `${pct}%`;
+
+    const gradeEl = document.getElementById(`grade-${idx}`);
+    if (gradeEl) {
+        gradeEl.innerText = grade;
+        gradeEl.className = `px-2 py-1 text-center font-bold border rounded ${getGradeColor(grade)}`;
+    }
+
+    // --- [จุดที่แก้ไข] ปรับแถบความก้าวหน้า ---
+    const progBar = document.getElementById(`progress-${idx}`);
+    if (progBar) {
+        // A. แก้ไข "ราง" (Parent Element) ให้สูงเท่ากัน
+        if (progBar.parentElement) {
+             // ลบความสูงเดิม (h-2.5) แล้วใส่ความสูงใหม่ (h-5) ให้เท่าลูก
+             progBar.parentElement.classList.remove('h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-4');
+             progBar.parentElement.classList.add('h-5', 'rounded-full', 'bg-gray-200', 'overflow-hidden');
+        }
+
+        // B. ความกว้าง (Cap ไว้ที่ 100% ไม่ให้ทะลุ)
+        const visualPct = Math.min(pct, 100);
+        progBar.style.width = `${visualPct}%`;
+        
+        // C. ใส่ตัวเลข % (ถ้า 0% ไม่ต้องโชว์เลข เดี๋ยวล้น)
+        progBar.innerText = pct > 0 ? `${pct}%` : "";
+
+        // D. กำหนด Class และสี
+        let baseClass = "h-5 flex items-center justify-center text-xs font-bold transition-all duration-500 shadow-sm ";
+        
+        // ถ้าเต็ม 100% ให้โค้งมนทั้งแถบ, ถ้าไม่เต็ม ให้โค้งเฉพาะด้านซ้าย (หรือโค้งตาม Parent ที่ overflow-hidden ไว้แล้ว)
+        // เพื่อความสวยงาม ใช้ rounded-full ไปเลย เพราะ Parent clip ไว้แล้ว
+        baseClass += "rounded-full ";
+
+        let colorClass = "";
+        if (pct >= 80) colorClass = "bg-green-600 text-white";       // 4
+        else if (pct >= 70) colorClass = "bg-green-500 text-white";  // 3
+        else if (pct >= 60) colorClass = "bg-yellow-400 text-black"; // 2 (ตัวหนังสือดำ)
+        else if (pct >= 50) colorClass = "bg-yellow-300 text-black"; // 1 (ตัวหนังสือดำ)
+        else colorClass = "bg-red-500 text-white";                   // 0
+
+        progBar.className = baseClass + colorClass;
+    }
+
+    // 4.5 ปุ่มสถานะ
+    const statusEl = document.getElementById(`status-${idx}`);
+    if (statusEl) {
+        statusEl.className = `w-8 h-8 rounded-full flex items-center justify-center text-white font-bold shadow-sm transition-colors duration-300 ${getGradeColor(grade)}`;
+    }
+	
+	// --- ส่วนที่ต้องแก้ไข/เพิ่มเติม ---
+    const iconWrapper = document.getElementById(`status-icon-wrapper-${idx}`);
+    if (iconWrapper) {
+        // ส่งค่า pct เข้าไป และกำหนด max เป็น 100 เพื่อให้ฟังก์ชันคำนวณตามร้อยละทันที
+        iconWrapper.innerHTML = generateStatusIcon(pct, 100);
+    }
+    // ----------------------------
+	
+
+    // 5. Auto-save
+    if(typeof debouncedSaveScores === 'function') debouncedSaveScores();
+
+    // 6. เปลี่ยนสีช่อง Input
+    if (el) updateInputColor(el, val, maxScore, sub);
+    
+    // 7. อัปเดตตารางสรุป
+    updateAchievementSummary(sub, getActiveStudentsInClass(activeClassName));
+}
+
+// ฟังก์ชันเสริมสำหรับเปลี่ยนสี (แยกออกมาให้โค้ดสั้นลง)
+// ฟังก์ชันจัดการสีช่องกรอกคะแนน (Update Color Logic)
+// ฟังก์ชันจัดการสีช่องกรอกคะแนน (แก้ไข: ปรับคู่สีให้ตัดกันและตรงตามเงื่อนไขเป๊ะๆ)
+function updateInputColor(el, val, max, sub) {
+    if (!el) return;
+
+    // 1. ล้าง Class สีทั้งหมดออกก่อน (เพื่อไม่ให้สีเก่าค้าง)
+    el.classList.remove(
+        'bg-white', 'bg-gray-50', 
+        'bg-yellow-300', 'bg-yellow-400', 
+        'bg-green-400', 'bg-green-500', 'bg-green-600',
+        'bg-red-400', 'bg-red-500',
+        'text-black', 'text-white', 'text-gray-800',
+        'font-bold'
+    );
+
+    const col = el.getAttribute('data-col') || "";
+    const isReal = col.endsWith('_r'); // ช่องคะแนนจริง
+    const isEdit = col.endsWith('_e'); // ช่องคะแนนแก้
+    
+    const numVal = parseFloat(val);
+    const hasValue = val !== "" && !isNaN(numVal);
+    // คำนวณ % คะแนน (ถ้าไม่มีคะแนนเต็ม ให้ถือเป็น 0%)
+    const pct = (hasValue && max > 0) ? (numVal / max) * 100 : 0;
+
+    // ตัวแปรเก็บ Class ที่จะใช้
+    let bgClass = '';
+    let textClass = '';
+
+    // --- กรณี 1: ช่องคะแนนจริง (_r) ---
+    if (isReal) {
+        if (!hasValue) {
+            // เริ่มต้น (ไม่มีค่า): พื้นขาว / ตัวดำ
+            bgClass = 'bg-white';
+            textClass = 'text-black';
+        } else {
+            if (pct >= 60) {
+                // มากกว่าหรือเท่ากับ 60%: พื้นเขียวเข้ม / ตัวขาว (อ่านง่าย)
+                bgClass = 'bg-green-500';
+                textClass = 'text-white font-bold';
+            } else {
+                // ต่ำกว่า 60%: พื้นเหลือง / ตัวดำ (อ่านง่าย)
+                bgClass = 'bg-yellow-300';
+                textClass = 'text-black';
+            }
+        }
+    }
+    
+    // --- กรณี 2: ช่องคะแนนแก้ (_e) ---
+    else if (isEdit) {
+        if (!hasValue) {
+            // เริ่มต้น (ไม่มีค่า): พื้นแดง / ตัวขาว (ตามที่กำหนด)
+            bgClass = 'bg-red-400';
+            textClass = 'text-white placeholder-red-100';
+        } else {
+            if (pct >= 60) {
+                // แก้ผ่าน (>= 60%): พื้นเขียวเข้ม / ตัวขาว
+                bgClass = 'bg-green-500';
+                textClass = 'text-white font-bold';
+            } else {
+                // แก้ไม่ผ่าน (< 60%): พื้นแดง / ตัวขาว
+                bgClass = 'bg-red-400';
+                textClass = 'text-white';
+            }
+        }
+    }
+    // กรณีอื่นๆ (เผื่อไว้)
+    else {
+        bgClass = 'bg-white';
+        textClass = 'text-black';
+    }
+
+    // ใส่ Class ใหม่เข้าไป
+    el.classList.add(bgClass);
+    
+    // แยกใส่ Class ตัวหนังสือ (เพราะอาจมีหลาย class ต่อกัน)
+    textClass.split(' ').forEach(c => el.classList.add(c));
+}
 	
 	function renderAchievementTable(sub, list) {
 		// หา Element ตาราง (รองรับทั้งหน้าพิมพ์และหน้า View)
@@ -5146,40 +5319,58 @@ function renderHeader(sub) {
 
     /* --- New Functions: Refresh Room, Enter Navigation, Paste --- */
 
-    function refreshGrades() {
-        if(!activeSubjectId || !activeClassName) return;
+	// ค้นหาฟังก์ชัน refreshGrades แล้วเปลี่ยนเป็นโค้ดนี้
+	function refreshGrades() {
+		if(!activeSubjectId || !activeClassName) return;
 
-        Swal.fire({
-            title: 'รีเฟรชคะแนนห้อง ' + activeClassName + '?',
-            text: "ระบบจะดึงคะแนนล่าสุดจาก Server เฉพาะห้องนี้ (ข้อมูลที่ยังไม่บันทึกจะหายไป)",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'ดึงข้อมูล',
-            confirmButtonColor: '#0891b2',
-            cancelButtonText: 'ยกเลิก'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                showLoading();
-                callBackend('getRoomScore', { subjectId: activeSubjectId, room: activeClassName })
-                .then(res => {
-                    if (res.result === 'success') {
-                        if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
-                        scoreData[activeSubjectId][activeClassName] = res.data;
-                        
-                        initTable();
-                        showNotification('อัปเดตข้อมูลเรียบร้อย');
-                    } else {
-                        Swal.fire('Error', res.message || 'ไม่สามารถดึงข้อมูลได้', 'error');
-                    }
-                    hideLoading();
-                })
-                .catch(err => {
-                    hideLoading();
-                    Swal.fire('Error', err.message, 'error');
-                });
-            }
-        });
-    }
+		// 1. ตรวจสอบว่าปัจจุบันผู้ใช้กำลังเปิดหน้าจอไหนอยู่
+		const activeView = document.querySelector('.view-section.view-active')?.id;
+		
+		Swal.fire({
+			title: 'รีเฟรชข้อมูลล่าสุด?',
+			text: "ระบบจะดึงคะแนนล่าสุดจากเซิร์ฟเวอร์ คุณต้องการทำต่อ?",
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonText: 'ดึงข้อมูล',
+			confirmButtonColor: '#0891b2',
+			cancelButtonText: 'ยกเลิก'
+		}).then((result) => {
+			if (result.isConfirmed) {
+				showLoading();
+				// เรียก Backend เพื่อดึงคะแนนล่าสุดของห้องนี้
+				callBackend('getRoomScore', { subjectId: activeSubjectId, room: activeClassName })
+					.then(res => {
+						if (res.result === 'success') {
+							// อัปเดตข้อมูลในตัวแปร Global
+							if (!scoreData[activeSubjectId]) scoreData[activeSubjectId] = {};
+							scoreData[activeSubjectId][activeClassName] = res.data;
+
+							// 2. สั่งวาดตารางใหม่ ให้ตรงกับหน้าที่เปิดอยู่
+							if (activeView === 'task-grading-view') {
+								initTaskTable();       // หน้าคะแนนงาน
+							} else if (activeView === 'rw-view') {
+								initRWTable();         // หน้าอ่าน คิด เขียน
+							} else if (activeView === 'competency-view') {
+								initCompetencyTable(); // หน้าสมรรถนะ
+							} else if (activeView === 'attribute-view') {
+								initAttributeTable();  // หน้าคุณลักษณะ
+							} else {
+								initTable();           // หน้าบันทึกคะแนนหลัก (Default)
+							}
+
+							showNotification('อัปเดตข้อมูลเรียบร้อย');
+						} else {
+							Swal.fire('Error', res.message || 'ไม่สามารถดึงข้อมูลได้', 'error');
+						}
+						hideLoading();
+					})
+					.catch(err => {
+						hideLoading();
+						Swal.fire('Error', err.message, 'error');
+					});
+			}
+		});
+	}
 
     function handleInputKeydown(e) {
         if (e.key === 'Enter') {
@@ -6503,6 +6694,7 @@ function saveCalendarEvent() {
 		if(typeof renderTaskSummary === 'function') {
 			renderTaskSummary(sub, classStudents);
 		}
+		fixAllInputColors();
 	}
 
 function renderTaskHeader(sub) {
@@ -6699,6 +6891,7 @@ function renderTaskHeader(sub) {
 		if(iconEl) {
 			iconEl.innerHTML = generateStatusIcon(passedTasksCount, sub.tasks.length);
 		}
+		renderTaskSummary(subjects.find(s => s.id === activeSubjectId), getActiveStudentsInClass(activeClassName));
 	}
 	
 	// --- Task Settings Logic (ใส่ไว้ใกล้ๆ กับ Unit Settings) ---
@@ -7878,7 +8071,7 @@ function autoSumAttr(uid, idx) {
 
 		if (type === 'rw') { resultKey = 'rw_result'; scorePrefix = 'rw_'; maxCount = 5; } 
 		else if (type === 'comp') { resultKey = 'comp_result'; scorePrefix = 'comp_'; maxCount = 5; } 
-		else if (type === 'attr') { resultKey = 'attr_result'; scorePrefix = 'attr_'; maxCount = 10; }
+		else if (type === 'attr') { resultKey = 'attr_result'; scorePrefix = 'attr_'; maxCount = 8; }
 
 		students.forEach(s => {
 			let sum = 0;
@@ -8422,6 +8615,89 @@ function autoFillByGrade(type) {
             }
         });
     }
+	
+	// 1. ฟังก์ชันคำนวณสีตามเงื่อนไข (Logic กลาง)
+function getScoreStatusClass(val, max, isEdit) {
+    const num = parseFloat(val);
+    const hasVal = (val !== "" && !isNaN(num));
+    const pct = (hasVal && max > 0) ? (num / max) * 100 : 0;
+
+    if (isEdit) {
+        // --- ช่องคะแนนแก้ (_e) ---
+        // เริ่มต้น/ตก (< 60%) = สีแดง (bg-red-400), ตัวขาว
+        if (!hasVal || pct < 60) return 'bg-red-400 text-white placeholder-red-200';
+        // ผ่าน (>= 60%) = สีเขียว (bg-green-500), ตัวขาว
+        return 'bg-green-500 text-white font-bold shadow-md';
+    } else {
+        // --- ช่องคะแนนจริง (_r) ---
+        // เริ่มต้น (ว่าง) = สีขาว
+        if (!hasVal) return 'bg-white text-black';
+        // ผ่าน (>= 60%) = สีเขียว (bg-green-500), ตัวขาว
+        if (pct >= 60) return 'bg-green-500 text-white font-bold shadow-md';
+        // ตก (< 60%) = สีเหลือง (bg-yellow-300), ตัวดำ
+        return 'bg-yellow-300 text-black';
+    }
+}
+
+// 2. ฟังก์ชันบังคับเปลี่ยนสีทุกช่องในตาราง (Force Update All)
+function fixAllInputColors() {
+    const sub = subjects.find(s => s.id === activeSubjectId);
+    if (!sub) return;
+
+    // ค้นหา Input คะแนนทั้งหมดในหน้าจอ
+    document.querySelectorAll('.input-score').forEach(el => {
+        const col = el.getAttribute('data-col');
+        if (!col) return; // ข้ามถ้าไม่มี data-col
+
+        const val = el.value;
+        let max = 0;
+        let isEdit = col.endsWith('_e'); // เช็คว่าเป็นช่องแก้หรือไม่
+
+        // หาคะแนนเต็ม (Max) ของช่องนั้น
+        if (col.startsWith('u')) { 
+            const uId = col.split('_')[0].replace('u','');
+            const u = sub.units.find(x => x.id == uId);
+            if(u) max = u.max;
+        } else if (col.startsWith('t')) { 
+            const tId = col.split('_')[0].replace('t','');
+            const t = sub.tasks.find(x => x.id == tId);
+            if(t) max = t.max;
+        } else if (col.startsWith('mid')) {
+            max = sub.midMax;
+        } else if (col.startsWith('fin')) {
+            max = sub.finMax;
+        }
+
+        // ล้าง Class สีเก่าออกให้เกลี้ยง
+        el.classList.remove(
+            'bg-white', 'bg-yellow-300', 'bg-green-500', 'bg-green-400',
+            'bg-red-400', 'bg-red-500', 'text-white', 'text-black', 
+            'placeholder-red-200', 'font-bold', 'shadow-md'
+        );
+
+        // ใส่ Class สีใหม่ที่ถูกต้อง
+        const newClass = getScoreStatusClass(val, max, isEdit);
+        newClass.split(' ').forEach(c => el.classList.add(c));
+    });
+}
+
+// 3. ปรับปรุง updateInputColor เดิมให้เรียกใช้ Logic เดียวกัน (จะได้ไม่งง)
+function updateInputColor(el, val, max, sub) {
+    if (!el) return;
+    const col = el.getAttribute('data-col') || "";
+    const isEdit = col.endsWith('_e');
+    
+    // ล้างสีเก่า
+    el.classList.remove(
+        'bg-white', 'bg-yellow-300', 'bg-green-500', 'bg-green-400',
+        'bg-red-400', 'bg-red-500', 'text-white', 'text-black', 
+        'placeholder-red-200', 'font-bold', 'shadow-md'
+    );
+    
+    // ใส่สีใหม่
+    const newClass = getScoreStatusClass(val, max, isEdit);
+    newClass.split(' ').forEach(c => el.classList.add(c));
+}
 </script>
 </body>
 </html>
